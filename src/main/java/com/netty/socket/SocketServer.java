@@ -13,7 +13,6 @@ import com.netty.config.Env;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -22,7 +21,6 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
 @Component
-@Sharable
 public class SocketServer implements ApplicationListener<ApplicationStartedEvent> {
 
 	public static final Logger log = LoggerFactory.getLogger(SocketServer.class);
