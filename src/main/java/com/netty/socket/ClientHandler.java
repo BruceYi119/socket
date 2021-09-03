@@ -18,6 +18,7 @@ public class ClientHandler extends ChannelDuplexHandler {
 	public static final Logger log = LoggerFactory.getLogger(ClientHandler.class);
 
 	private SocketModel model = null;
+	private int cnt = 0;
 
 	private void initModel(ChannelHandlerContext ctx) {
 		model = new SocketModel();
@@ -98,13 +99,14 @@ public class ClientHandler extends ChannelDuplexHandler {
 	private void process(ChannelHandlerContext ctx) {
 		ByteBuf packet = model.getPacket();
 
-		while (packet.readableBytes() >= model.getMsgSize()) {
+		while (packet.readableBytes() >= model.getMsgSize() && cnt < 15000) {
 			byte[] bytes = new byte[100];
 			packet.readBytes(bytes).discardReadBytes();
 			ByteBuf buf = Unpooled.buffer();
 			buf.writeBytes(String.format("%-100s", "C").replaceAll(" ", "C").getBytes());
 			ctx.writeAndFlush(buf);
-			log.warn(String.format("ClientHandler : [%s]", new String(bytes)));
+			log.warn(String.format("ClientHandler : [%s][%d]", new String(bytes), cnt));
+			cnt++;
 			break;
 		}
 	}

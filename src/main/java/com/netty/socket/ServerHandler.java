@@ -22,6 +22,7 @@ public class ServerHandler extends ChannelDuplexHandler {
 	public static final Logger log = LoggerFactory.getLogger(ServerHandler.class);
 
 	private Map<ChannelId, SocketModel> models = new HashMap<>();
+	private int cnt = 0;
 
 	private void initModel(ChannelHandlerContext ctx) {
 		SocketModel model = new SocketModel();
@@ -93,13 +94,14 @@ public class ServerHandler extends ChannelDuplexHandler {
 		SocketModel model = models.get(ctx.channel().id());
 		ByteBuf packet = model.getPacket();
 
-		while (packet.readableBytes() >= model.getMsgSize()) {
+		while (packet.readableBytes() >= model.getMsgSize() && cnt < 10000) {
 			byte[] bytes = new byte[100];
 			packet.readBytes(bytes).discardReadBytes();
 			ByteBuf buf = Unpooled.buffer();
 			buf.writeBytes(String.format("%-100s", "S").replaceAll(" ", "S").getBytes());
 			ctx.writeAndFlush(buf);
-			log.warn(String.format("ServerHandler : [%s]", new String(bytes)));
+			log.warn(String.format("ServerHandler : [%s][%d]", new String(bytes), cnt));
+			cnt++;
 			break;
 		}
 	}

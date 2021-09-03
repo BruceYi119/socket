@@ -25,6 +25,7 @@ public class SocketClient implements Runnable {
 
 	public SocketClient(int port, String host) {
 		ArrayList<ChannelHandler> handlers = new ArrayList<ChannelHandler>();
+		handlers.add(new IdleHandler(30, 30, 0));
 		handlers.add(new ClientHandler());
 		this.port = port;
 		this.host = host;
