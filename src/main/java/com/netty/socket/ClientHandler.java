@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -18,12 +17,11 @@ public class ClientHandler extends ChannelDuplexHandler {
 	public static final Logger log = LoggerFactory.getLogger(ClientHandler.class);
 
 	private SocketModel model = null;
-	private int cnt = 0;
 
 	private void initModel(ChannelHandlerContext ctx) {
 		model = new SocketModel();
 //		model.setSb(new StringBuilder());
-		model.setPacket(ctx.alloc().buffer());
+		model.setPacket(ctx.alloc().buffer(500));
 //		try {
 //			model.setRaf(new RandomAccessFile(
 //					String.format("%s%s%S", com.netty.config.Env.getSendPath(), File.separator, "test.mp4"), "r"));
@@ -50,6 +48,8 @@ public class ClientHandler extends ChannelDuplexHandler {
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		ByteBuf b = (ByteBuf) msg;
+
+		log.info(String.format("packet : %s", model.getPacket()));
 
 		try {
 			byte[] bytes = new byte[b.readableBytes()];
@@ -98,17 +98,6 @@ public class ClientHandler extends ChannelDuplexHandler {
 
 	private void process(ChannelHandlerContext ctx) {
 		ByteBuf packet = model.getPacket();
-
-		while (packet.readableBytes() >= model.getMsgSize() && cnt < 15000) {
-			byte[] bytes = new byte[100];
-			packet.readBytes(bytes).discardReadBytes();
-			ByteBuf buf = Unpooled.buffer();
-			buf.writeBytes(String.format("%-100s", "C").replaceAll(" ", "C").getBytes());
-			ctx.writeAndFlush(buf);
-			log.warn(String.format("ClientHandler : [%s][%d]", new String(bytes), cnt));
-			cnt++;
-			break;
-		}
 	}
 
 	private void clearModel() {

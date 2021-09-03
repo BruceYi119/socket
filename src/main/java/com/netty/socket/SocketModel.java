@@ -4,9 +4,6 @@ import java.io.BufferedOutputStream;
 import java.io.FileOutputStream;
 import java.io.RandomAccessFile;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCountUtil;
 import lombok.Getter;
@@ -16,9 +13,8 @@ import lombok.Setter;
 @Setter
 public class SocketModel {
 
-	public static final Logger log = LoggerFactory.getLogger(SocketModel.class);
-
-	private int msgSize = 100;
+//	private int maxBufSize = 2147483647;
+	private int msgSize = 700;
 
 	private long fileSize = 0;
 	private long readSize = 0;
@@ -58,7 +54,6 @@ public class SocketModel {
 			if (fos != null)
 				fos.close();
 		} catch (Exception e) {
-			log.error("SocketModel clear() Exception : ", e);
 			ReferenceCountUtil.safeRelease(packet);
 			ReferenceCountUtil.safeRelease(fileBuf);
 			throw new Exception(e);

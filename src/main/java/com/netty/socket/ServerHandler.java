@@ -22,7 +22,6 @@ public class ServerHandler extends ChannelDuplexHandler {
 	public static final Logger log = LoggerFactory.getLogger(ServerHandler.class);
 
 	private Map<ChannelId, SocketModel> models = new HashMap<>();
-	private int cnt = 0;
 
 	private void initModel(ChannelHandlerContext ctx) {
 		SocketModel model = new SocketModel();
@@ -35,7 +34,7 @@ public class ServerHandler extends ChannelDuplexHandler {
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
 		ByteBuf buf = Unpooled.buffer();
-		buf.writeBytes(String.format("%-100s", "C").replaceAll(" ", "C").getBytes());
+		buf.writeBytes(String.format("%-700s", "C").replaceAll(" ", "C").getBytes());
 		ctx.writeAndFlush(buf);
 		initModel(ctx);
 	}
@@ -93,17 +92,6 @@ public class ServerHandler extends ChannelDuplexHandler {
 	private void process(ChannelHandlerContext ctx) {
 		SocketModel model = models.get(ctx.channel().id());
 		ByteBuf packet = model.getPacket();
-
-		while (packet.readableBytes() >= model.getMsgSize() && cnt < 10000) {
-			byte[] bytes = new byte[100];
-			packet.readBytes(bytes).discardReadBytes();
-			ByteBuf buf = Unpooled.buffer();
-			buf.writeBytes(String.format("%-100s", "S").replaceAll(" ", "S").getBytes());
-			ctx.writeAndFlush(buf);
-			log.warn(String.format("ServerHandler : [%s][%d]", new String(bytes), cnt));
-			cnt++;
-			break;
-		}
 	}
 
 	private void clearModel(ChannelHandlerContext ctx) {
