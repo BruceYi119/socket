@@ -19,6 +19,7 @@ public class FileTest implements Runnable {
 			RandomAccessFile raf = new RandomAccessFile("D:/file/test.txt", "rw");
 			raf.seek(pos);
 			raf.write(data);
+			raf.close();
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {

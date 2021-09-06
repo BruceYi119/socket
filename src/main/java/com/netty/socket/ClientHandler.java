@@ -1,5 +1,8 @@
 package com.netty.socket;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,6 +20,17 @@ public class ClientHandler extends ChannelDuplexHandler {
 	public static final Logger log = LoggerFactory.getLogger(ClientHandler.class);
 
 	private SocketModel model = null;
+	private Map<String, Integer[]> msgLen = new HashMap<>();
+
+	{
+		msgLen.put("SI", new Integer[] { 1, 3, 20, 20 });
+		msgLen.put("RI", new Integer[] { 9, 4 });
+		msgLen.put("SS", new Integer[] { 10 });
+		msgLen.put("SC", new Integer[] { 10, 20 });
+		msgLen.put("RC", new Integer[] { 10, 20 });
+		msgLen.put("SE", new Integer[] { 10, 20 });
+		msgLen.put("RE", new Integer[] { 10, 20 });
+	}
 
 	private void initModel(ChannelHandlerContext ctx) {
 		model = new SocketModel();
