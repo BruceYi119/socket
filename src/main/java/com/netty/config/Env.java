@@ -2,6 +2,8 @@ package com.netty.config;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
@@ -11,6 +13,18 @@ public class Env {
 
 	private static String clientIp, sendPath, uploadPath, serverPort, clientPort;
 	private static Environment env;
+	private static Map<String, Integer[]> msgLen = new HashMap<>();
+
+	static {
+		msgLen.put("CC", new Integer[] { 2, 3 });
+		msgLen.put("SI", new Integer[] { 1, 3, 20, 20, 20 });
+		msgLen.put("RI", new Integer[] { 9, 4 });
+		msgLen.put("SS", new Integer[] { 10 });
+		msgLen.put("SC", new Integer[] { 10, 20 });
+		msgLen.put("RC", new Integer[] { 10, 20 });
+		msgLen.put("SE", new Integer[] { 10, 20 });
+		msgLen.put("RE", new Integer[] { 10, 20 });
+	}
 
 	public Env(Environment environment) {
 		env = environment;
@@ -60,6 +74,10 @@ public class Env {
 
 	public static Environment getEnv() {
 		return env;
+	}
+
+	public static Map<String, Integer[]> getMsgLen() {
+		return msgLen;
 	}
 
 }

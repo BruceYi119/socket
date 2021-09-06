@@ -6,11 +6,9 @@ import java.io.RandomAccessFile;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCountUtil;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
+@Data
 public class SocketModel {
 
 	// 900MB
@@ -19,7 +17,6 @@ public class SocketModel {
 	private int maxfileBufSize = 10485760;
 	private boolean msgSizeRead = false;
 	private long readSize = 0;
-	private byte[] data = new byte[5120];
 	private ByteBuf packet = null;
 	private ByteBuf fileBuf = null;
 	private StringBuilder sb = null;
@@ -35,7 +32,7 @@ public class SocketModel {
 	// 응답코드[3](000 : 정상, 999 : 오류)
 	private String msgRsCode = "000";
 
-	// 개시요구[SI] 공통[9] + 멀티전송[1] + 확인간격[3] + 파일명[20] + 파일사이즈[20] = 53
+	// 개시요구[SI] 공통[9] + 멀티전송[1] + 확인간격[3] + 파일명[20] + 포지션[20] + 파일사이즈[20] = 73
 	// 개시응답[RI] 공통[9] + 멀티전송[1] + 확인간격[3] = 13
 	// 멀티전송[1](1:일반전송/2>:멀티쓰레드)
 	private int msgMulti = 0;
@@ -43,6 +40,8 @@ public class SocketModel {
 	private int msgChkCnt = 30;
 	// 파일명[20]
 	private String fileNm = null;
+	// 포지션[20]
+	private long filePos = 0;
 	// 파일사이즈[20]
 	private long fileSize = 0;
 
@@ -69,6 +68,7 @@ public class SocketModel {
 		msgSize = 0;
 		msgType = null;
 		msgMulti = 1;
+		filePos = 0;
 		msgChkCnt = 30;
 		msgSizeRead = false;
 		msgRsCode = "000";
@@ -80,7 +80,6 @@ public class SocketModel {
 		recvSize = 0;
 		sendSeq = 0;
 		recvSeq = 0;
-		data = null;
 		sb = null;
 
 		try {

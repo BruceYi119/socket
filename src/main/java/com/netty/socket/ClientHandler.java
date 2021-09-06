@@ -1,10 +1,13 @@
 package com.netty.socket;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.netty.component.Components;
+import com.netty.config.Env;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
@@ -20,17 +23,6 @@ public class ClientHandler extends ChannelDuplexHandler {
 	public static final Logger log = LoggerFactory.getLogger(ClientHandler.class);
 
 	private SocketModel model = null;
-	private Map<String, Integer[]> msgLen = new HashMap<>();
-
-	{
-		msgLen.put("SI", new Integer[] { 1, 3, 20, 20 });
-		msgLen.put("RI", new Integer[] { 9, 4 });
-		msgLen.put("SS", new Integer[] { 10 });
-		msgLen.put("SC", new Integer[] { 10, 20 });
-		msgLen.put("RC", new Integer[] { 10, 20 });
-		msgLen.put("SE", new Integer[] { 10, 20 });
-		msgLen.put("RE", new Integer[] { 10, 20 });
-	}
 
 	private void initModel(ChannelHandlerContext ctx) {
 		model = new SocketModel();
@@ -112,6 +104,117 @@ public class ClientHandler extends ChannelDuplexHandler {
 
 	private void process(ChannelHandlerContext ctx) {
 		ByteBuf packet = model.getPacket();
+		int idx = 0;
+		byte[] bytes = null;
+		List<byte[]> msgList = null;
+
+		while (packet.readableBytes() >= 4) {
+			if (packet.readableBytes() < 4)
+				break;
+
+			if (!model.isMsgSizeRead()) {
+				bytes = new byte[4];
+				packet.readBytes(bytes);
+				model.setMsgSize(Integer.parseInt(new String(bytes)) - 4);
+				model.setMsgSizeRead(true);
+			}
+
+			if (packet.readableBytes() < model.getMsgSize() && model.isMsgSizeRead())
+				break;
+
+			if (packet.readableBytes() >= model.getMsgSize() && model.isMsgSizeRead()) {
+				// 공통 읽기
+				msgList = readMsg(Env.getMsgLen().get("CC"), packet);
+				for (byte[] b : msgList) {
+					if (idx == 0)
+						model.setMsgType(Components.convertByteToString(b));
+					else if (idx == 1)
+						model.setMsgRsCode(Components.convertByteToString(b));
+					else
+						break;
+
+					idx++;
+				}
+
+				// 타입별 전문 읽기
+				switch (model.getMsgType()) {
+				case "SI":
+					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
+					for (byte[] b : msgList) {
+						if (idx == 0)
+							model.setMsgMulti(Integer.parseInt(Components.convertByteToString(b)));
+						else if (idx == 1)
+							model.setMsgChkCnt(Integer.parseInt(Components.convertByteToString(b)));
+						else if (idx == 2)
+							model.setFileNm(Components.convertByteToString(b));
+						else if (idx == 3)
+							model.setFilePos(Long.parseLong(Components.convertByteToString(b)));
+						else if (idx == 4)
+							model.setFileSize(Long.parseLong(Components.convertByteToString(b)));
+						else
+							break;
+
+						idx++;
+					}
+					break;
+				case "SS":
+					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
+					for (byte[] b : msgList) {
+						if (idx == 0)
+							model.setSendSeq(Integer.parseInt(Components.convertByteToString(b)));
+						else
+							break;
+
+						idx++;
+					}
+					break;
+				case "SC":
+					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
+					for (byte[] b : msgList) {
+						if (idx == 0)
+							model.setSendSeq(Integer.parseInt(Components.convertByteToString(b)));
+						else if (idx == 1)
+							model.setSendSize(Long.parseLong(Components.convertByteToString(b)));
+						else
+							break;
+
+						idx++;
+					}
+					break;
+				case "SE":
+					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
+
+					for (byte[] b : msgList) {
+						if (idx == 0)
+							model.setSendSeq(Integer.parseInt(Components.convertByteToString(b)));
+						else if (idx == 1)
+							model.setSendSize(Long.parseLong(Components.convertByteToString(b)));
+						else
+							break;
+
+						idx++;
+					}
+					break;
+				default:
+					break;
+				}
+			}
+
+			model.setMsgSizeRead(false);
+		}
+	}
+
+	private List<byte[]> readMsg(Integer[] lenList, ByteBuf packet) {
+		List<byte[]> list = new ArrayList<>();
+		byte[] bytes = null;
+
+		for (int len : lenList) {
+			bytes = new byte[len];
+			packet.readBytes(bytes);
+			list.add(bytes);
+		}
+
+		return list;
 	}
 
 	private void clearModel() {

@@ -1,13 +1,21 @@
 package com.netty.socket;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.netty.component.Components;
+import com.netty.config.Env;
+
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -22,31 +30,16 @@ public class ServerHandler extends ChannelDuplexHandler {
 	public static final Logger log = LoggerFactory.getLogger(ServerHandler.class);
 
 	private Map<ChannelId, SocketModel> models = new HashMap<>();
-	private Map<String, Integer[]> msgLen = new HashMap<>();
-
-	{
-		msgLen.put("SI", new Integer[] { 1, 3, 20, 20 });
-		msgLen.put("RI", new Integer[] { 9, 4 });
-		msgLen.put("SS", new Integer[] { 10 });
-		msgLen.put("SC", new Integer[] { 10, 20 });
-		msgLen.put("RC", new Integer[] { 10, 20 });
-		msgLen.put("SE", new Integer[] { 10, 20 });
-		msgLen.put("RE", new Integer[] { 10, 20 });
-	}
 
 	private void initModel(ChannelHandlerContext ctx) {
 		SocketModel model = new SocketModel();
-//		model.setSb(new StringBuilder());
+		model.setSb(new StringBuilder());
 		model.setPacket(ctx.alloc().buffer());
-
 		models.put(ctx.channel().id(), model);
 	}
 
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
-		ByteBuf buf = Unpooled.buffer();
-		buf.writeBytes(String.format("%-700s", "C").replaceAll(" ", "C").getBytes());
-		ctx.writeAndFlush(buf);
 		initModel(ctx);
 	}
 
@@ -103,6 +96,147 @@ public class ServerHandler extends ChannelDuplexHandler {
 	private void process(ChannelHandlerContext ctx) {
 		SocketModel model = models.get(ctx.channel().id());
 		ByteBuf packet = model.getPacket();
+		int idx = 0;
+		byte[] bytes = null;
+		List<byte[]> msgList = null;
+
+		while (packet.readableBytes() >= 4) {
+			if (packet.readableBytes() < 4)
+				break;
+
+			if (!model.isMsgSizeRead()) {
+				bytes = new byte[4];
+				packet.readBytes(bytes).discardReadBytes();
+				model.setMsgSize(Integer.parseInt(new String(bytes)) - 4);
+				model.setMsgSizeRead(true);
+			}
+
+			if (packet.readableBytes() < model.getMsgSize() && model.isMsgSizeRead())
+				break;
+
+			if (packet.readableBytes() >= model.getMsgSize() && model.isMsgSizeRead()) {
+				// 공통 읽기
+				msgList = readMsg(Env.getMsgLen().get("CC"), packet);
+				for (byte[] b : msgList) {
+					if (idx == 0)
+						model.setMsgType(Components.convertByteToString(b));
+					else if (idx == 1)
+						model.setMsgRsCode(Components.convertByteToString(b));
+					else
+						break;
+
+					idx++;
+				}
+
+				// 타입별 전문 읽기
+				switch (model.getMsgType()) {
+				case "SI":
+					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
+					for (byte[] b : msgList) {
+						if (idx == 0)
+							model.setMsgMulti(Integer.parseInt(Components.convertByteToString(b)));
+						else if (idx == 1)
+							model.setMsgChkCnt(Integer.parseInt(Components.convertByteToString(b)));
+						else if (idx == 2)
+							model.setFileNm(Components.convertByteToString(b));
+						else if (idx == 3)
+							model.setFilePos(Long.parseLong(Components.convertByteToString(b)));
+						else if (idx == 4)
+							model.setFileSize(Long.parseLong(Components.convertByteToString(b)));
+						else
+							break;
+
+						idx++;
+					}
+
+					log.info(String.format("RECV MSG : [%d %s %s %d %d %s %d %d]", model.getMsgSize(),
+							model.getMsgType(), model.getMsgRsCode(), model.getMsgMulti(), model.getMsgChkCnt(),
+							model.getFileNm(), model.getFilePos(), model.getFileSize()));
+					break;
+				case "SS":
+					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
+					for (byte[] b : msgList) {
+						if (idx == 0)
+							model.setSendSeq(Integer.parseInt(Components.convertByteToString(b)));
+						else
+							break;
+
+						idx++;
+					}
+
+					bytes = new byte[model.getMsgSize() - 19];
+					packet.readBytes(bytes).discardReadBytes();
+
+					try {
+						model.setRaf(new RandomAccessFile(
+								String.format("%s%s%s", Env.getUploadPath(), File.separator, model.getFileNm()), "w"));
+						model.getRaf().seek(model.getFilePos());
+						model.getRaf().write(bytes);
+						model.getRaf().close();
+						model.setRaf(null);
+						model.setFilePos(model.getFilePos() + bytes.length);
+					} catch (FileNotFoundException e) {
+						log.error("ServerHandler process() FileNotFoundException : ", e);
+					} catch (IOException e) {
+						log.error("ServerHandler process() IOException : ", e);
+					}
+
+					log.info(String.format("RECV MSG : [%d %s %s %d]", model.getMsgSize(), model.getMsgType(),
+							model.getMsgRsCode(), model.getSendSeq()));
+					break;
+				case "SC":
+					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
+					for (byte[] b : msgList) {
+						if (idx == 0)
+							model.setSendSeq(Integer.parseInt(Components.convertByteToString(b)));
+						else if (idx == 1)
+							model.setSendSize(Long.parseLong(Components.convertByteToString(b)));
+						else
+							break;
+
+						idx++;
+					}
+
+					log.info(String.format("RECV MSG : [%d %s %s %d %d]", model.getMsgSize(), model.getMsgType(),
+							model.getMsgRsCode(), model.getSendSeq(), model.getSendSize()));
+					break;
+				case "SE":
+					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
+
+					for (byte[] b : msgList) {
+						if (idx == 0)
+							model.setSendSeq(Integer.parseInt(Components.convertByteToString(b)));
+						else if (idx == 1)
+							model.setSendSize(Long.parseLong(Components.convertByteToString(b)));
+						else
+							break;
+
+						idx++;
+					}
+
+					log.info(String.format("RECV MSG : [%d %s %s %d %d]", model.getMsgSize(), model.getMsgType(),
+							model.getMsgRsCode(), model.getSendSeq(), model.getSendSize()));
+					break;
+				default:
+					break;
+				}
+			}
+
+			model.setMsgSizeRead(false);
+		}
+	}
+
+	private List<byte[]> readMsg(Integer[] lenList, ByteBuf packet) {
+		List<byte[]> list = new ArrayList<>();
+		byte[] bytes = null;
+
+		for (int len : lenList) {
+			bytes = new byte[len];
+			packet.readBytes(bytes).discardReadBytes();
+			list.add(bytes);
+		}
+
+		return list;
 	}
 
 	private void clearModel(ChannelHandlerContext ctx) {
