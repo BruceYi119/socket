@@ -16,6 +16,7 @@ import com.netty.component.Components;
 import com.netty.config.Env;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -115,6 +116,9 @@ public class ServerHandler extends ChannelDuplexHandler {
 				break;
 
 			if (packet.readableBytes() >= model.getMsgSize() && model.isMsgSizeRead()) {
+				// sb 초기화
+				model.getSb().setLength(0);
+
 				// 공통 읽기
 				msgList = readMsg(Env.getMsgLen().get("GG"), packet);
 				for (byte[] b : msgList) {
@@ -128,6 +132,8 @@ public class ServerHandler extends ChannelDuplexHandler {
 					idx++;
 				}
 
+				idx = 0;
+
 				// 타입별 전문 읽기
 				switch (model.getMsgType()) {
 				case "SI":
@@ -138,7 +144,7 @@ public class ServerHandler extends ChannelDuplexHandler {
 						else if (idx == 1)
 							model.setMsgChkCnt(Integer.parseInt(Components.convertByteToString(b)));
 						else if (idx == 2)
-							model.setFileNm(Components.convertByteToString(b));
+							model.setFileNm(Components.convertByteToString(b).trim());
 						else if (idx == 3)
 							model.setFilePos(Long.parseLong(Components.convertByteToString(b)));
 						else if (idx == 4)
@@ -152,6 +158,15 @@ public class ServerHandler extends ChannelDuplexHandler {
 					log.info(String.format("RECV MSG : [%d %s %s %d %d %s %d %d]", model.getMsgSize(),
 							model.getMsgType(), model.getMsgRsCode(), model.getMsgMulti(), model.getMsgChkCnt(),
 							model.getFileNm(), model.getFilePos(), model.getFileSize()));
+
+					ByteBuf buf = Unpooled.buffer();
+					model.getSb().append(Components.numPad(13, 4));
+					model.getSb().append(String.format("RI0002%s", Components.numPad(model.getMsgChkCnt(), 3)));
+					buf.writeBytes(model.getSb().toString().getBytes());
+					ctx.writeAndFlush(buf);
+
+					log.info(String.format("SEND MSG : [13 RI %s %d %d]", 13, model.getMsgRsCode(), model.getMsgMulti(),
+							model.getMsgChkCnt()));
 					break;
 				case "SS":
 					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
@@ -222,6 +237,7 @@ public class ServerHandler extends ChannelDuplexHandler {
 				}
 			}
 
+			idx = 0;
 			model.setMsgSizeRead(false);
 		}
 	}

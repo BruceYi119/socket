@@ -1,10 +1,10 @@
 package com.netty.test;
 
-import com.netty.socket.LogHandler;
-
 public class Test {
 
 	public static void main(String[] args) throws Exception {
+		String s = "00090";
+		System.out.println(Long.parseLong(s));
 //		int i = 5;
 //		boolean read = false;
 //
