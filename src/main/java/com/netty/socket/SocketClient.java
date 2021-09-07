@@ -40,7 +40,7 @@ public class SocketClient implements Runnable {
 		group = new NioEventLoopGroup();
 
 		b.group(group).channel(NioSocketChannel.class).option(ChannelOption.TCP_NODELAY, true)
-				.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5 * 1000).handler(this.handlers);
+				.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5 * 1000).handler(handlers);
 
 		try {
 			ChannelFuture cf = b.connect(host, port).sync();

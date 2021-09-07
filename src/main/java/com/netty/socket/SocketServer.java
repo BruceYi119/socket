@@ -18,7 +18,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
-import io.netty.handler.logging.LoggingHandler;
 
 @Component
 public class SocketServer implements ApplicationListener<ApplicationStartedEvent> {
@@ -36,9 +35,6 @@ public class SocketServer implements ApplicationListener<ApplicationStartedEvent
 		handlers.add(new IdleHandler(30, 30, 0));
 		handlers.add(new ServerHandler());
 		this.handlers = new InitHandler(handlers);
-
-		// static Env를 활용해서 설정파일 읽기
-		log.warn(Env.getEnv().getProperty("logging.logback.rollingpolicy.file-name-pattern"));
 	}
 
 	@Override
@@ -50,7 +46,7 @@ public class SocketServer implements ApplicationListener<ApplicationStartedEvent
 
 		sb = new ServerBootstrap();
 		sb.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).option(ChannelOption.SO_BACKLOG, 100)
-				.handler(new LoggingHandler(LogLevel.INFO)).childHandler(this.handlers);
+				.handler(new LogHandler(LogLevel.DEBUG)).childHandler(handlers);
 
 		try {
 			ChannelFuture cf = sb.bind(port).sync();

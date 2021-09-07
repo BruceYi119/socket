@@ -1,22 +1,24 @@
 package com.netty.test;
 
+import com.netty.socket.LogHandler;
+
 public class Test {
 
 	public static void main(String[] args) throws Exception {
-		int i = 5;
-		boolean read = false;
-
-		while (i >= 5) {
-			if (!read) {
-				read = true;
-			}
-
-			System.out.println(read);
-			System.out.println(i);
-			break;
-		}
-
-		System.out.println("end");
+//		int i = 5;
+//		boolean read = false;
+//
+//		while (i >= 5) {
+//			if (!read) {
+//				read = true;
+//			}
+//
+//			System.out.println(read);
+//			System.out.println(i);
+//			break;
+//		}
+//
+//		System.out.println("end");
 
 //		List<Thread> threads = new ArrayList<Thread>();
 //

@@ -27,7 +27,7 @@ public class ClientHandler extends ChannelDuplexHandler {
 	private void initModel(ChannelHandlerContext ctx) {
 		model = new SocketModel();
 //		model.setSb(new StringBuilder());
-		model.setPacket(ctx.alloc().buffer(500));
+		model.setPacket(ctx.alloc().buffer());
 //		try {
 //			model.setRaf(new RandomAccessFile(
 //					String.format("%s%s%S", com.netty.config.Env.getSendPath(), File.separator, "test.mp4"), "r"));
