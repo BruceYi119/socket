@@ -16,7 +16,7 @@ public class Env {
 	private static Map<String, Integer[]> msgLen = new HashMap<>();
 
 	static {
-		msgLen.put("CC", new Integer[] { 2, 3 });
+		msgLen.put("GG", new Integer[] { 2, 3 });
 		msgLen.put("SI", new Integer[] { 1, 3, 20, 20, 20 });
 		msgLen.put("RI", new Integer[] { 9, 4 });
 		msgLen.put("SS", new Integer[] { 10 });

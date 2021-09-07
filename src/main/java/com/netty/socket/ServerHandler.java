@@ -116,7 +116,7 @@ public class ServerHandler extends ChannelDuplexHandler {
 
 			if (packet.readableBytes() >= model.getMsgSize() && model.isMsgSizeRead()) {
 				// 공통 읽기
-				msgList = readMsg(Env.getMsgLen().get("CC"), packet);
+				msgList = readMsg(Env.getMsgLen().get("GG"), packet);
 				for (byte[] b : msgList) {
 					if (idx == 0)
 						model.setMsgType(Components.convertByteToString(b));

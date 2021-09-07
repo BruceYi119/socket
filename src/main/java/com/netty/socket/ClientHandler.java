@@ -124,7 +124,7 @@ public class ClientHandler extends ChannelDuplexHandler {
 
 			if (packet.readableBytes() >= model.getMsgSize() && model.isMsgSizeRead()) {
 				// 공통 읽기
-				msgList = readMsg(Env.getMsgLen().get("CC"), packet);
+				msgList = readMsg(Env.getMsgLen().get("GG"), packet);
 				for (byte[] b : msgList) {
 					if (idx == 0)
 						model.setMsgType(Components.convertByteToString(b));
@@ -138,7 +138,7 @@ public class ClientHandler extends ChannelDuplexHandler {
 
 				// 타입별 전문 읽기
 				switch (model.getMsgType()) {
-				case "SI":
+				case "RI":
 					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
 					for (byte[] b : msgList) {
 						if (idx == 0)
@@ -157,7 +157,7 @@ public class ClientHandler extends ChannelDuplexHandler {
 						idx++;
 					}
 					break;
-				case "SS":
+				case "RS":
 					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
 					for (byte[] b : msgList) {
 						if (idx == 0)
@@ -168,7 +168,7 @@ public class ClientHandler extends ChannelDuplexHandler {
 						idx++;
 					}
 					break;
-				case "SC":
+				case "RC":
 					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
 					for (byte[] b : msgList) {
 						if (idx == 0)
@@ -181,7 +181,7 @@ public class ClientHandler extends ChannelDuplexHandler {
 						idx++;
 					}
 					break;
-				case "SE":
+				case "RE":
 					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
 
 					for (byte[] b : msgList) {
