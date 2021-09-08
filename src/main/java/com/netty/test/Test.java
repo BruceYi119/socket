@@ -3,8 +3,13 @@ package com.netty.test;
 public class Test {
 
 	public static void main(String[] args) throws Exception {
-		String s = "00090";
-		System.out.println(Long.parseLong(s));
+//		int n = 99;
+//		long l = 2020;
+//
+//		System.out.println(Math.subtractExact(n, l));
+
+//		String s = "00090";
+//		System.out.println(Long.parseLong(s));
 //		int i = 5;
 //		boolean read = false;
 //

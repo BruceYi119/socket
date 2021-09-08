@@ -56,21 +56,23 @@ public class MainController {
 			divisionVal = model.getFileSize() / cut;
 			remainder = Math.floorMod(model.getFileSize(), cut);
 
-			for (int i = 1; i <= cut; i++) {
-				if (i == 0) {
-					sendSize = model.getMaxSendSize();
-				} else if (i == cut) {
-					sendSize = model.getMaxSendSize();
-					filePos = Math.addExact(filePos, model.getMaxSendSize());
-				} else {
-					sendSize = Math.addExact(model.getMaxSendSize(), remainder);
-					filePos = Math.addExact(filePos, model.getMaxSendSize());
-				}
-
-				json.put("result", "success");
-				list.add(new Thread(new SocketClient(Integer.parseInt(Env.getClientPort()), Env.getClientIp(), sendSize,
-						filePos, fileNm)));
-			}
+//			for (int i = 1; i <= cut; i++) {
+//				if (i == 0) {
+//					sendSize = model.getMaxSendSize();
+//				} else if (i == cut) {
+//					sendSize = model.getMaxSendSize();
+//					filePos = Math.addExact(filePos, model.getMaxSendSize());
+//				} else {
+//					sendSize = Math.addExact(model.getMaxSendSize(), remainder);
+//					filePos = Math.addExact(filePos, model.getMaxSendSize());
+//				}
+//
+			json.put("result", "success");
+//				list.add(new Thread(new SocketClient(Integer.parseInt(Env.getClientPort()), Env.getClientIp(), sendSize,
+//						filePos, fileNm)));
+			list.add(new Thread(new SocketClient(Integer.parseInt(Env.getClientPort()), Env.getClientIp(),
+					model.getFileSize(), 0, fileNm)));
+//			}
 
 			for (Thread t : list)
 				t.start();

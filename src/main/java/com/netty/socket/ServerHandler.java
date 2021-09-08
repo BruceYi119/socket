@@ -1,6 +1,5 @@
 package com.netty.socket;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -50,9 +49,7 @@ public class ServerHandler extends ChannelDuplexHandler {
 		SocketModel model = models.get(ctx.channel().id());
 
 		try {
-			byte[] bytes = new byte[b.readableBytes()];
-			b.readBytes(bytes);
-			model.getPacket().writeBytes(bytes);
+			b.readBytes(model.getPacket());
 			b.release();
 		} catch (Exception e) {
 			log.error("ServerHandler channelRead() Exception : ", e);
@@ -116,9 +113,6 @@ public class ServerHandler extends ChannelDuplexHandler {
 				break;
 
 			if (packet.readableBytes() >= model.getMsgSize() && model.isMsgSizeRead()) {
-				// sb 초기화
-				model.getSb().setLength(0);
-
 				// 공통 읽기
 				msgList = readMsg(Env.getMsgLen().get("GG"), packet);
 				for (byte[] b : msgList) {
@@ -155,18 +149,20 @@ public class ServerHandler extends ChannelDuplexHandler {
 						idx++;
 					}
 
-					log.info(String.format("RECV MSG : [%d %s %s %d %d %s %d %d]", model.getMsgSize(),
-							model.getMsgType(), model.getMsgRsCode(), model.getMsgMulti(), model.getMsgChkCnt(),
-							model.getFileNm(), model.getFilePos(), model.getFileSize()));
+					log.info(String.format("ClientHandler MSG : [%d %s %s %d %d %s %d %d]",
+							Math.addExact(model.getMsgSize(), 4), model.getMsgType(), model.getMsgRsCode(),
+							model.getMsgMulti(), model.getMsgChkCnt(), model.getFileNm(), model.getFilePos(),
+							model.getFileSize()));
 
-					ByteBuf buf = Unpooled.buffer();
 					model.getSb().append(Components.numPad(13, 4));
 					model.getSb().append(String.format("RI0002%s", Components.numPad(model.getMsgChkCnt(), 3)));
+
+					ByteBuf buf = Unpooled.buffer();
 					buf.writeBytes(model.getSb().toString().getBytes());
 					ctx.writeAndFlush(buf);
 
-					log.info(String.format("SEND MSG : [13 RI %s %d %d]", 13, model.getMsgRsCode(), model.getMsgMulti(),
-							model.getMsgChkCnt()));
+					log.info(String.format("ServerHandler MSG : [%s]", model.getSb().toString()));
+					model.getSb().setLength(0);
 					break;
 				case "SS":
 					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
@@ -179,25 +175,27 @@ public class ServerHandler extends ChannelDuplexHandler {
 						idx++;
 					}
 
+					log.info(String.format("ClientHandler MSG : [%d %s %s %d]", model.getMsgSize(), model.getMsgType(),
+							model.getMsgRsCode(), model.getSendSeq()));
+
 					bytes = new byte[model.getMsgSize() - 19];
 					packet.readBytes(bytes).discardReadBytes();
 
 					try {
 						model.setRaf(new RandomAccessFile(
-								String.format("%s%s%s", Env.getUploadPath(), File.separator, model.getFileNm()), "w"));
+								String.format("%s/%s", Env.getUploadPath(), model.getFileNm()), "w"));
 						model.getRaf().seek(model.getFilePos());
 						model.getRaf().write(bytes);
 						model.getRaf().close();
 						model.setRaf(null);
-						model.setFilePos(model.getFilePos() + bytes.length);
+						model.setRecvSeq(model.getRecvSeq() + 1);
+						model.setFilePos(Math.addExact(model.getFilePos(), bytes.length));
+						model.setRecvSize(Math.addExact(model.getRecvSize(), bytes.length));
 					} catch (FileNotFoundException e) {
 						log.error("ServerHandler process() FileNotFoundException : ", e);
 					} catch (IOException e) {
 						log.error("ServerHandler process() IOException : ", e);
 					}
-
-					log.info(String.format("RECV MSG : [%d %s %s %d]", model.getMsgSize(), model.getMsgType(),
-							model.getMsgRsCode(), model.getSendSeq()));
 					break;
 				case "SC":
 					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
@@ -212,9 +210,31 @@ public class ServerHandler extends ChannelDuplexHandler {
 						idx++;
 					}
 
-					log.info(String.format("RECV MSG : [%d %s %s %d %d]", model.getMsgSize(), model.getMsgType(),
-							model.getMsgRsCode(), model.getSendSeq(), model.getSendSize()));
-					break;
+					log.info(String.format("ClientHandler MSG : [%d %s %s %d %d]", model.getMsgSize(),
+							model.getMsgType(), model.getMsgRsCode(), model.getSendSeq(), model.getSendSize()));
+
+					if (model.getRecvSeq() != model.getSendSeq())
+						model.setMsgRsCode("999");
+					if (model.getRecvSize() != model.getSendSize())
+						model.setMsgRsCode("999");
+
+					model.getSb().append(Components.numPad(39, 4));
+
+					if (model.getMsgRsCode().equals("000"))
+						model.getSb().append("RC");
+					else if (model.getMsgRsCode().equals("999"))
+						model.getSb().append("RE");
+
+					model.getSb().append(model.getMsgRsCode());
+					model.getSb().append(Components.numPad(model.getRecvSeq(), 10));
+					model.getSb().append(Components.numPad(model.getRecvSize(), 20));
+
+					buf = Unpooled.buffer();
+					buf.writeBytes(model.getSb().toString().getBytes());
+					ctx.writeAndFlush(buf);
+
+					log.info(String.format("ServerHandler MSG : [%s]", model.getSb().toString()));
+					model.getSb().setLength(0);
 				case "SE":
 					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
 
@@ -229,10 +249,27 @@ public class ServerHandler extends ChannelDuplexHandler {
 						idx++;
 					}
 
-					log.info(String.format("RECV MSG : [%d %s %s %d %d]", model.getMsgSize(), model.getMsgType(),
-							model.getMsgRsCode(), model.getSendSeq(), model.getSendSize()));
+					log.info(String.format("ClientHandler MSG : [%d %s %s %d %d]", model.getMsgSize(),
+							model.getMsgType(), model.getMsgRsCode(), model.getSendSeq(), model.getSendSize()));
+
+					model.getSb().append(Components.numPad(39, 4));
+					model.getSb().append("RE");
+					model.getSb().append(model.getMsgRsCode());
+					model.getSb().append(Components.numPad(model.getRecvSeq(), 10));
+					model.getSb().append(Components.numPad(model.getRecvSize(), 20));
+
+					buf = Unpooled.buffer();
+					buf.writeBytes(model.getSb().toString().getBytes());
+					ctx.writeAndFlush(buf);
+
+					log.info(String.format("ServerHandler MSG : [%s]", model.getSb().toString()));
+					model.getSb().setLength(0);
+
+					clearModel(ctx);
+					ctx.close();
 					break;
 				default:
+					log.warn("ServerHandler process() switch default");
 					break;
 				}
 			}

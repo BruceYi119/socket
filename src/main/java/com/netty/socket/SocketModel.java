@@ -24,6 +24,15 @@ public class SocketModel {
 	private FileOutputStream fos = null;
 	private BufferedOutputStream bos = null;
 
+	// 전문 구성
+	// SI 개시요구[73]
+	// RI 개시응답[13]
+	// SS 전송[20~5120]
+	// SC 확인요구[39]
+	// RC 확인응답[39]
+	// SE 종료요구[39]
+	// RE 종료응답[39]
+
 	// 전문 공통 전문길이[4] + 타입[2] + 응답코드[3] = 9 (요구/응답 공통)
 	// 전문길이[4]
 	private int msgSize = 0;
