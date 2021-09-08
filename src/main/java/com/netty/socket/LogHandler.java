@@ -1,10 +1,12 @@
 package com.netty.socket;
 
+import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.logging.ByteBufFormat;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
+@Sharable
 @SuppressWarnings("static-access")
 public class LogHandler extends LoggingHandler {
 

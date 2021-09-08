@@ -12,7 +12,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.logging.LogLevel;
 
 public class SocketClient implements Runnable {
 
@@ -26,7 +25,6 @@ public class SocketClient implements Runnable {
 
 	public SocketClient(int port, String host, long sendSize, long filePos, String fileNm) {
 		ArrayList<ChannelHandler> handlers = new ArrayList<ChannelHandler>();
-		handlers.add(new LogHandler(LogLevel.DEBUG));
 		handlers.add(new IdleHandler(30, 30, 0));
 		handlers.add(new ClientHandler(sendSize, filePos, fileNm));
 		this.port = port;

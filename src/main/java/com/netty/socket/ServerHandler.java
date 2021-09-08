@@ -16,16 +16,16 @@ import com.netty.config.Env;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCountUtil;
 
 @Sharable
-public class ServerHandler extends ChannelDuplexHandler {
+public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 	public static final Logger log = LoggerFactory.getLogger(ServerHandler.class);
 
@@ -49,7 +49,7 @@ public class ServerHandler extends ChannelDuplexHandler {
 		SocketModel model = models.get(ctx.channel().id());
 
 		try {
-			b.readBytes(model.getPacket());
+			model.getPacket().writeBytes(b);
 			b.release();
 		} catch (Exception e) {
 			log.error("ServerHandler channelRead() Exception : ", e);
@@ -97,6 +97,7 @@ public class ServerHandler extends ChannelDuplexHandler {
 		int idx = 0;
 		byte[] bytes = null;
 		List<byte[]> msgList = null;
+		log.warn(String.format("readableBytes : %d", packet.readableBytes()));
 
 		while (packet.readableBytes() >= 4) {
 			if (packet.readableBytes() < 4)
@@ -175,15 +176,15 @@ public class ServerHandler extends ChannelDuplexHandler {
 						idx++;
 					}
 
-					log.info(String.format("ClientHandler MSG : [%d %s %s %d]", model.getMsgSize(), model.getMsgType(),
-							model.getMsgRsCode(), model.getSendSeq()));
+					log.info(String.format("ClientHandler MSG : [%d %s %s %d]", Math.addExact(model.getMsgSize(), 4),
+							model.getMsgType(), model.getMsgRsCode(), model.getSendSeq()));
 
-					bytes = new byte[model.getMsgSize() - 19];
+					bytes = new byte[model.getMsgSize() - 15];
 					packet.readBytes(bytes).discardReadBytes();
 
 					try {
 						model.setRaf(new RandomAccessFile(
-								String.format("%s/%s", Env.getUploadPath(), model.getFileNm()), "w"));
+								String.format("%s/%s", Env.getUploadPath(), model.getFileNm()), "rw"));
 						model.getRaf().seek(model.getFilePos());
 						model.getRaf().write(bytes);
 						model.getRaf().close();
@@ -210,7 +211,7 @@ public class ServerHandler extends ChannelDuplexHandler {
 						idx++;
 					}
 
-					log.info(String.format("ClientHandler MSG : [%d %s %s %d %d]", model.getMsgSize(),
+					log.info(String.format("ClientHandler MSG : [%d %s %s %d %d]", Math.addExact(model.getMsgSize(), 4),
 							model.getMsgType(), model.getMsgRsCode(), model.getSendSeq(), model.getSendSize()));
 
 					if (model.getRecvSeq() != model.getSendSeq())
@@ -249,7 +250,7 @@ public class ServerHandler extends ChannelDuplexHandler {
 						idx++;
 					}
 
-					log.info(String.format("ClientHandler MSG : [%d %s %s %d %d]", model.getMsgSize(),
+					log.info(String.format("ClientHandler MSG : [%d %s %s %d %d]", Math.addExact(model.getMsgSize(), 4),
 							model.getMsgType(), model.getMsgRsCode(), model.getSendSeq(), model.getSendSize()));
 
 					model.getSb().append(Components.numPad(39, 4));
@@ -272,10 +273,10 @@ public class ServerHandler extends ChannelDuplexHandler {
 					log.warn("ServerHandler process() switch default");
 					break;
 				}
-			}
 
-			idx = 0;
-			model.setMsgSizeRead(false);
+				idx = 0;
+				model.setMsgSizeRead(false);
+			}
 		}
 	}
 
