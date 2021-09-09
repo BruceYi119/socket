@@ -35,6 +35,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 		SocketModel model = new SocketModel();
 		model.setSb(new StringBuilder());
 		model.setPacket(ctx.alloc().buffer());
+		model.setFileBuf(ctx.alloc().buffer());
 		models.put(ctx.channel().id(), model);
 	}
 
@@ -82,10 +83,10 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 		if (evt instanceof IdleStateEvent) {
 			IdleStateEvent e = (IdleStateEvent) evt;
 			if (e.state() == IdleState.READER_IDLE) {
-				log.info("ClientHandler userEventTriggered() READER_IDLE");
+				log.warn("ClientHandler userEventTriggered() READER_IDLE");
 				ctx.close();
 			} else if (e.state() == IdleState.WRITER_IDLE) {
-				log.info("ClientHandler userEventTriggered() WRITER_IDLE");
+				log.warn("ClientHandler userEventTriggered() WRITER_IDLE");
 				ctx.close();
 			}
 		}
@@ -97,10 +98,11 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 		int idx = 0;
 		byte[] bytes = null;
 		List<byte[]> msgList = null;
-		log.warn(String.format("readableBytes : %d", packet.readableBytes()));
 
-		while (packet.readableBytes() >= 4) {
-			if (packet.readableBytes() < 4)
+		log.info(String.format("readableBytes : %d", packet.readableBytes()));
+
+		while (packet.readableBytes() > 3) {
+			if (packet.readableBytes() < 4 && !model.isMsgSizeRead())
 				break;
 
 			if (!model.isMsgSizeRead()) {
@@ -132,6 +134,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 				// 타입별 전문 읽기
 				switch (model.getMsgType()) {
 				case "SI":
+					log.warn(String.format("FILE START ChannelId : %s", ctx.channel().id()));
 					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
 					for (byte[] b : msgList) {
 						if (idx == 0)
@@ -161,7 +164,6 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 					ByteBuf buf = Unpooled.buffer();
 					buf.writeBytes(model.getSb().toString().getBytes());
 					ctx.writeAndFlush(buf);
-
 					log.info(String.format("ServerHandler MSG : [%s]", model.getSb().toString()));
 					model.getSb().setLength(0);
 					break;
@@ -181,21 +183,29 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 					bytes = new byte[model.getMsgSize() - 15];
 					packet.readBytes(bytes).discardReadBytes();
+					model.getFileBuf().writeBytes(bytes);
+					model.setRecvSize(Math.addExact(model.getRecvSize(), bytes.length));
+					model.setRecvSeq(model.getRecvSeq() + 1);
 
-					try {
-						model.setRaf(new RandomAccessFile(
-								String.format("%s/%s", Env.getUploadPath(), model.getFileNm()), "rw"));
-						model.getRaf().seek(model.getFilePos());
-						model.getRaf().write(bytes);
-						model.getRaf().close();
-						model.setRaf(null);
-						model.setRecvSeq(model.getRecvSeq() + 1);
-						model.setFilePos(Math.addExact(model.getFilePos(), bytes.length));
-						model.setRecvSize(Math.addExact(model.getRecvSize(), bytes.length));
-					} catch (FileNotFoundException e) {
-						log.error("ServerHandler process() FileNotFoundException : ", e);
-					} catch (IOException e) {
-						log.error("ServerHandler process() IOException : ", e);
+					if (model.getFileBuf().readableBytes() >= model.getMaxfileBufSize()
+							|| model.getFileSize() == model.getRecvSize()) {
+						try {
+							bytes = null;
+							bytes = new byte[model.getFileBuf().readableBytes()];
+							model.getFileBuf().readBytes(bytes).discardReadBytes();
+							model.setRaf(new RandomAccessFile(
+									String.format("%s/%s", Env.getUploadPath(), model.getFileNm()), "rw"));
+							model.getRaf().seek(model.getFilePos());
+							model.getRaf().write(bytes);
+							model.getRaf().close();
+							model.setRaf(null);
+							model.setFilePos(Math.addExact(model.getFilePos(), bytes.length));
+							log.warn(String.format("FILE WRITE BYTES : %d", bytes.length));
+						} catch (FileNotFoundException e) {
+							log.error("ServerHandler process() FileNotFoundException : ", e);
+						} catch (IOException e) {
+							log.error("ServerHandler process() IOException : ", e);
+						}
 					}
 					break;
 				case "SC":
@@ -236,7 +246,9 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 					log.info(String.format("ServerHandler MSG : [%s]", model.getSb().toString()));
 					model.getSb().setLength(0);
+					break;
 				case "SE":
+					log.warn(String.format("FILE END ChannelId : %s", ctx.channel().id()));
 					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
 
 					for (byte[] b : msgList) {
@@ -266,6 +278,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 					log.info(String.format("ServerHandler MSG : [%s]", model.getSb().toString()));
 					model.getSb().setLength(0);
 
+					log.warn(String.format("ServerHandler END MODEL : %s", model));
 					clearModel(ctx);
 					ctx.close();
 					break;

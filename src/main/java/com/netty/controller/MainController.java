@@ -1,6 +1,5 @@
 package com.netty.controller;
 
-import java.io.File;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,9 +43,7 @@ public class MainController {
 		json.put("result", "fail");
 
 		try {
-			RandomAccessFile raf = new RandomAccessFile(
-					String.format("%s%s%s", Env.getSendPath(), File.separator, fileNm), "r");
-
+			RandomAccessFile raf = new RandomAccessFile(String.format("%s/%s", Env.getSendPath(), fileNm), "r");
 			model.setFileNm(fileNm);
 			model.setFileSize(raf.length());
 			raf.close();
@@ -73,12 +70,12 @@ public class MainController {
 			list.add(new Thread(new SocketClient(Integer.parseInt(Env.getClientPort()), Env.getClientIp(),
 					model.getFileSize(), 0, fileNm)));
 //			}
-
-			for (Thread t : list)
-				t.start();
 		} catch (Exception e) {
 			log.error("Exception : ", e);
 		} finally {
+			for (Thread t : list)
+				t.start();
+
 			return json;
 		}
 	}

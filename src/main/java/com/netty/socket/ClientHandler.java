@@ -99,10 +99,10 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 		if (evt instanceof IdleStateEvent) {
 			IdleStateEvent e = (IdleStateEvent) evt;
 			if (e.state() == IdleState.READER_IDLE) {
-				log.info("ClientHandler userEventTriggered() READER_IDLE");
+				log.warn("ClientHandler userEventTriggered() READER_IDLE");
 				ctx.close();
 			} else if (e.state() == IdleState.WRITER_IDLE) {
-				log.info("ClientHandler userEventTriggered() WRITER_IDLE");
+				log.warn("ClientHandler userEventTriggered() WRITER_IDLE");
 				ctx.close();
 			}
 		}
@@ -114,10 +114,11 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 		byte[] bytes = null;
 		ByteBuf buf = null;
 		List<byte[]> msgList = null;
-		log.warn(String.format("readableBytes : %d", packet.readableBytes()));
 
-		while (packet.readableBytes() >= 4) {
-			if (packet.readableBytes() < 4)
+		log.info(String.format("readableBytes : %d", packet.readableBytes()));
+
+		while (packet.readableBytes() > 3) {
+			if (packet.readableBytes() < 4 && !model.isMsgSizeRead())
 				break;
 
 			if (!model.isMsgSizeRead()) {
@@ -220,6 +221,8 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 
 					log.info(String.format("ServerHandler MSG : [%d %s %s %d %d]", Math.addExact(model.getMsgSize(), 4),
 							model.getMsgType(), model.getMsgRsCode(), model.getRecvSeq(), model.getRecvSize()));
+
+					log.warn(String.format("ClientHandler END MODEL : %s", model));
 					clearModel();
 					ctx.close();
 					break;
@@ -238,60 +241,59 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 		byte[] bytes = null;
 		ByteBuf buf = null;
 		int cnt = 0;
-		long size = Math.subtractExact(model.getFileSize(), model.getSendSize());
+		long size = 0;
 
-		while (model.getMsgChkCnt() > cnt) {
-			if (size > 0) {
-				try {
-					model.setRaf(
-							new RandomAccessFile(String.format("%s/%s", Env.getSendPath(), model.getFileNm()), "r"));
-					bytes = null;
-					bytes = size > 5101 ? new byte[5101] : new byte[(int) size];
-					model.getRaf().seek(model.getFilePos());
-					model.getRaf().read(bytes);
-					model.getRaf().close();
-					model.setRaf(null);
-					model.setSendSeq(model.getSendSeq() + 1);
-					model.setSendSize(Math.addExact(model.getSendSize(), bytes.length));
-					model.getSb().append(Components.numPad(Math.addExact(bytes.length, 19), 4));
-					model.getSb().append("SS000");
-					model.getSb().append(Components.numPad(model.getSendSeq(), 10));
-				} catch (FileNotFoundException e) {
-					log.error("ClientHandler process() FileNotFoundException : ", e);
-				} catch (IOException e) {
-					log.error("ClientHandler process() IOException : ", e);
-				}
+		while ((size = Math.subtractExact(model.getFileSize(), model.getSendSize())) > 0
+				&& model.getMsgChkCnt() > cnt) {
+			try {
+				model.setRaf(new RandomAccessFile(String.format("%s/%s", Env.getSendPath(), model.getFileNm()), "r"));
+				bytes = null;
+				bytes = size > 5101 ? new byte[5101] : new byte[(int) size];
+				model.getRaf().seek(model.getFilePos());
+				model.getRaf().read(bytes);
+				model.getRaf().close();
+				model.setRaf(null);
+				model.setFilePos(Math.addExact(model.getFilePos(), bytes.length));
+				model.setSendSeq(model.getSendSeq() + 1);
+				model.setSendSize(Math.addExact(model.getSendSize(), bytes.length));
+				model.getSb().append(Components.numPad(Math.addExact(bytes.length, 19), 4));
+				model.getSb().append("SS000");
+				model.getSb().append(Components.numPad(model.getSendSeq(), 10));
+			} catch (FileNotFoundException e) {
+				log.error("ClientHandler process() FileNotFoundException : ", e);
+			} catch (IOException e) {
+				log.error("ClientHandler process() IOException : ", e);
+			}
+
+			buf = Unpooled.buffer();
+			buf.writeBytes(model.getSb().toString().getBytes());
+			if (bytes != null)
+				buf.writeBytes(bytes);
+			ctx.writeAndFlush(buf);
+
+			log.info(String.format("ClientHandler MSG : [%s]", model.getSb().toString()));
+			model.getSb().setLength(0);
+
+			if (size < 5101) {
+				model.getSb().append(Components.numPad(39, 4));
+				model.getSb().append("SE000");
+				model.getSb().append(Components.numPad(model.getSendSeq(), 10));
+				model.getSb().append(Components.numPad(model.getSendSize(), 20));
 
 				buf = Unpooled.buffer();
 				buf.writeBytes(model.getSb().toString().getBytes());
-				if (bytes != null)
-					buf.writeBytes(bytes);
-				log.warn(String.format("SS len : %d", buf.readableBytes()));
 				ctx.writeAndFlush(buf);
 
 				log.info(String.format("ClientHandler MSG : [%s]", model.getSb().toString()));
 				model.getSb().setLength(0);
+				break;
+			}
 
-				cnt++;
+			cnt++;
 
-				if (model.getMsgChkCnt() == cnt) {
-					model.getSb().append(Components.numPad(39, 4));
-					model.getSb().append("SC000");
-					model.getSb().append(Components.numPad(model.getSendSeq(), 10));
-					model.getSb().append(Components.numPad(model.getSendSize(), 20));
-
-					buf = Unpooled.buffer();
-					buf.writeBytes(model.getSb().toString().getBytes());
-					log.warn(String.format("SC len : %d", buf.readableBytes()));
-					ctx.writeAndFlush(buf);
-
-					log.info(String.format("ClientHandler MSG : [%s]", model.getSb().toString()));
-					model.getSb().setLength(0);
-					break;
-				}
-			} else {
+			if (model.getMsgChkCnt() == cnt) {
 				model.getSb().append(Components.numPad(39, 4));
-				model.getSb().append("SE000");
+				model.getSb().append("SC000");
 				model.getSb().append(Components.numPad(model.getSendSeq(), 10));
 				model.getSb().append(Components.numPad(model.getSendSize(), 20));
 
