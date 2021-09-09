@@ -24,7 +24,6 @@ public class FileSend {
 	private Env env;
 
 	@EventListener
-	@SuppressWarnings("static-access")
 	public void event(Event event) {
 		List<Thread> list = new ArrayList<>();
 		String fileNm = "test.mp4";
@@ -68,11 +67,6 @@ public class FileSend {
 					model.getFileSize(), 0, fileNm)));
 
 //			}
-
-			Thread st = new Thread();
-			log.warn("event sleep");
-			st.sleep(3000);
-			log.warn("event start");
 
 			for (Thread t : list)
 				t.start();

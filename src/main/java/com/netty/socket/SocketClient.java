@@ -30,8 +30,6 @@ public class SocketClient implements Runnable {
 		this.port = port;
 		this.host = host;
 		this.handlers = new InitHandler(handlers);
-
-		run();
 	}
 
 	@Override

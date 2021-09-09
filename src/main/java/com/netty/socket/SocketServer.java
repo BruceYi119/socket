@@ -38,7 +38,6 @@ public class SocketServer implements ApplicationListener<ApplicationReadyEvent> 
 		handlers.add(new ServerHandler());
 		this.handlers = new InitHandler(handlers);
 		this.publisher = publisher;
-		log.warn("SocketServer()");
 	}
 
 	@Override

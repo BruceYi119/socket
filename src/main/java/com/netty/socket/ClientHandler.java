@@ -47,6 +47,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		log.warn("ACTIVE");
 		initModel(ctx);
 		ByteBuf buf = Unpooled.buffer();
 		model.getSb().append(Components.numPad(73, 4));
@@ -83,6 +84,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+		log.warn("INACTIVE");
 		clearModel();
 		ctx.close();
 	}

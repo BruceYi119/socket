@@ -25,7 +25,7 @@ public class LogHandler extends LoggingHandler {
 			logger.log(internalLevel.WARN, format(ctx, "ACTIVE"));
 		}
 		ctx.fireChannelActive();
-//		publisher.publishEvent(new Event(this));
+		publisher.publishEvent(new Event(this));
 	}
 
 	@Override
