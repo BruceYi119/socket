@@ -4,7 +4,8 @@ import java.util.ArrayList;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.context.event.ApplicationStartedEvent;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
@@ -20,7 +21,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 
 @Component
-public class SocketServer implements ApplicationListener<ApplicationStartedEvent> {
+public class SocketServer implements ApplicationListener<ApplicationReadyEvent> {
 
 	public static final Logger log = LoggerFactory.getLogger(SocketServer.class);
 
@@ -29,16 +30,19 @@ public class SocketServer implements ApplicationListener<ApplicationStartedEvent
 	private EventLoopGroup bossGroup;
 	private EventLoopGroup workerGroup;
 	private InitHandler handlers;
+	private ApplicationEventPublisher publisher;
 
-	public SocketServer(Env env) {
+	public SocketServer(FileSend fs, ApplicationEventPublisher publisher) {
 		ArrayList<ChannelHandler> handlers = new ArrayList<ChannelHandler>();
 		handlers.add(new IdleHandler(30, 30, 0));
 		handlers.add(new ServerHandler());
 		this.handlers = new InitHandler(handlers);
+		this.publisher = publisher;
+		log.warn("SocketServer()");
 	}
 
 	@Override
-	public void onApplicationEvent(ApplicationStartedEvent event) {
+	public void onApplicationEvent(ApplicationReadyEvent event) {
 		port = Integer.parseInt(Env.getServerPort());
 
 		bossGroup = new NioEventLoopGroup(1);
@@ -46,7 +50,7 @@ public class SocketServer implements ApplicationListener<ApplicationStartedEvent
 
 		sb = new ServerBootstrap();
 		sb.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class).option(ChannelOption.SO_BACKLOG, 100)
-				.handler(new LogHandler(LogLevel.DEBUG)).childHandler(handlers);
+				.handler(new LogHandler(LogLevel.DEBUG, publisher)).childHandler(handlers);
 
 		try {
 			ChannelFuture cf = sb.bind(port).sync();
