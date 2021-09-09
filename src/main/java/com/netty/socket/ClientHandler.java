@@ -60,6 +60,8 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 
 		log.info(String.format("ClientHandler MSG : [%s]", model.getSb().toString()));
 		model.getSb().setLength(0);
+
+		log.warn(String.format("START MODEL : %s", model));
 	}
 
 	@Override

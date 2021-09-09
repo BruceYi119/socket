@@ -33,10 +33,7 @@ public class FileSend {
 		long cut = 0;
 		long divisionVal = 0;
 		long remainder = 0;
-//		long oriCut = Math.floorDiv(l, n);
-//		long cut = Math.addExact(oriCut, 1);
-//		long divisionVal = l / cut;
-//		long remainder = Math.floorMod(l, cut);
+
 		SocketModel model = new SocketModel();
 
 		try {
@@ -50,23 +47,26 @@ public class FileSend {
 			divisionVal = model.getFileSize() / cut;
 			remainder = Math.floorMod(model.getFileSize(), cut);
 
-//			for (int i = 1; i <= cut; i++) {
-//				if (i == 0) {
-//					sendSize = model.getMaxSendSize();
-//				} else if (i == cut) {
-//					sendSize = model.getMaxSendSize();
-//					filePos = Math.addExact(filePos, model.getMaxSendSize());
-//				} else {
-//					sendSize = Math.addExact(model.getMaxSendSize(), remainder);
-//					filePos = Math.addExact(filePos, model.getMax	SendSize());
-//				}
-//
-//				list.add(new Thread(new SocketClient(Integer.parseInt(Env.getClientPort()), Env.getClientIp(), sendSize,
-//						filePos, fileNm)));
-			list.add(new Thread(new SocketClient(Integer.parseInt(Env.getClientPort()), Env.getClientIp(),
-					model.getFileSize(), 0, fileNm)));
+			for (int i = 1; i <= cut; i++) {
+				if (i == 1) {
+					sendSize = divisionVal;
+				} else if (i == cut) {
+					sendSize = Math.addExact(divisionVal, remainder);
+					filePos = Math.addExact(filePos, sendSize);
+				} else {
+					sendSize = divisionVal;
+					filePos = Math.addExact(filePos, divisionVal);
+				}
 
-//			}
+				list.add(new Thread(new SocketClient(Integer.parseInt(Env.getClientPort()), Env.getClientIp(), sendSize,
+						filePos, fileNm)));
+
+			}
+
+//			list.add(new Thread(new SocketClient(Integer.parseInt(Env.getClientPort()), Env.getClientIp(),
+//					model.getFileSize(), 0, fileNm)));
+
+			log.warn(String.format("Thread cnt : %d", list.size()));
 
 			for (Thread t : list)
 				t.start();
