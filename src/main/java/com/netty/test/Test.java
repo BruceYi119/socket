@@ -1,15 +1,24 @@
 package com.netty.test;
 
+import java.io.RandomAccessFile;
+
 public class Test {
 
-	public static void main(String[] args) throws Exception {
-		System.out.println(1 % 30);
+//	public static void main(String[] args) throws Exception {
+//		RandomAccessFile raf = new RandomAccessFile("D:/file/upload/test.txt", "rw");
+//		raf.seek(50);
+//		raf.write("!TEST#".getBytes());
+//		raf.close();
 
+//		System.out.println(Math.addExact(0, 5000));
+//		System.out.println(Math.addExact(303, 4040));
+//		System.out.println(1 % 30);
+//
 //		int n = 99;
 //		long l = 2020;
 //
 //		System.out.println(Math.subtractExact(n, l));
-
+//
 //		String s = "00090";
 //		System.out.println(Long.parseLong(s));
 //		int i = 5;
@@ -26,22 +35,8 @@ public class Test {
 //		}
 //
 //		System.out.println("end");
-
-//		List<Thread> threads = new ArrayList<Thread>();
 //
-//		threads.add(new Thread(new FileTest(0, "TEST".getBytes())));
-//		threads.add(new Thread(new FileTest(100, "ABCDEFG".getBytes())));
-//		threads.add(new Thread(new FileTest(50, "50".getBytes())));
-//		threads.add(new Thread(new FileTest(10, "?????".getBytes())));
-//		threads.add(new Thread(new FileTest(150, "#####".getBytes())));
-//		threads.add(new Thread(new FileTest(90, "AA+++".getBytes())));
-//
-//		for (Thread t : threads)
-//			t.start();
-
 //		long n = 943718400;
-//		// 943718400
-//		// 2182407056
 //		RandomAccessFile raf = new RandomAccessFile("D:/file/send/test.mp4", "r");
 //		long l = 2182407056l;
 //		long oriCut = Math.floorDiv(l, n);
@@ -58,5 +53,6 @@ public class Test {
 //		System.out.println(Math.floorDiv(l, 5120l));
 //		System.out.println(Math.multiplyExact(426251l, 5120l));
 //		System.out.println(Math.multiplyExact(426251l, 20l));
-	}
+//	}
+
 }

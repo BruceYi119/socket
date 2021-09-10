@@ -32,11 +32,14 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 	private Map<ChannelId, SocketModel> models = new HashMap<>();
 
 	private void initModel(ChannelHandlerContext ctx) {
+//		Random ran = new Random();
 		SocketModel model = new SocketModel();
+		models.put(ctx.channel().id(), model);
 		model.setSb(new StringBuilder());
 		model.setPacket(ctx.alloc().buffer());
 		model.setFileBuf(ctx.alloc().buffer());
-		models.put(ctx.channel().id(), model);
+//		model.setMaxfileBufSize(Env.fileBufLen[ran.nextInt(3)]);
+		log.warn(String.format("ServerHandler START MODEL : %s", model));
 	}
 
 	@Override

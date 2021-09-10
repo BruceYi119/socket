@@ -14,6 +14,8 @@ public class Env {
 	private static String clientIp, sendPath, uploadPath, serverPort, clientPort;
 	private static Environment env;
 	private static Map<String, Integer[]> msgLen = new HashMap<>();
+	// 7MB/11MB/15MB
+	public static int[] fileBufLen = { 7340032, 11534336, 15728640 };
 
 	static {
 		msgLen.put("GG", new Integer[] { 2, 3 });

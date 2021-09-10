@@ -22,15 +22,15 @@ import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCountUtil;
 
 @Sharable
-public class ClientHandler extends ChannelInboundHandlerAdapter {
+public class ClientHandler_ extends ChannelInboundHandlerAdapter {
 
-	public static final Logger log = LoggerFactory.getLogger(ClientHandler.class);
+	public static final Logger log = LoggerFactory.getLogger(ClientHandler_.class);
 
 	private SocketModel model = null;
 	private String fileNm;
 	private long filePos, sendSize;
 
-	public ClientHandler(long sendSize, long filePos, String fileNm) {
+	public ClientHandler_(long sendSize, long filePos, String fileNm) {
 		this.fileNm = fileNm;
 		this.filePos = filePos;
 		this.sendSize = sendSize;
@@ -62,7 +62,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 		log.info(String.format("ClientHandler MSG : [%s]", model.getSb().toString()));
 		model.getSb().setLength(0);
 
-		log.warn(String.format("ClientHandler START MODEL : %s", model));
+		log.warn(String.format("START MODEL : %s", model));
 	}
 
 	@Override
@@ -253,15 +253,28 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 			cnt++;
 
 			try {
-				long size = Math.subtractExact(model.getFileSize(), model.getSendSize());
+				if (model.getFileBuf().readableBytes() == 0
+						|| (model.getFileBuf().readableBytes() < 5120 && model.getFileSize() > model.getSendSize())) {
+					bytes = null;
+					long size = Math.subtractExact(model.getFileSize(), model.getMaxfileReadBufSize()) > model
+							.getMaxfileReadBufSize() ? model.getMaxfileReadBufSize()
+									: Math.subtractExact(model.getFileSize(), model.getMaxfileReadBufSize());
+					model.setRaf(
+							new RandomAccessFile(String.format("%s/%s", Env.getSendPath(), model.getFileNm()), "r"));
+					bytes = new byte[(int) size];
+					model.getRaf().seek(model.getFilePos());
+					model.getRaf().read(bytes);
+					model.getRaf().close();
+					model.setRaf(null);
+					model.getFileBuf().writeBytes(bytes);
+					model.setFilePos(Math.addExact(model.getFilePos(), bytes.length));
+					log.warn(String.format("FILE READ BYTES : %d", bytes.length));
+				}
+
 				bytes = null;
-				bytes = size > 5101 ? new byte[5101] : new byte[(int) size];
-				model.setRaf(new RandomAccessFile(String.format("%s/%s", Env.getSendPath(), model.getFileNm()), "r"));
-				model.getRaf().seek(model.getFilePos());
-				model.getRaf().read(bytes);
-				model.getRaf().close();
-				model.setRaf(null);
-				model.setFilePos(Math.addExact(model.getFilePos(), bytes.length));
+				bytes = model.getFileBuf().readableBytes() > 5101 ? new byte[5101]
+						: new byte[model.getFileBuf().readableBytes()];
+				model.getFileBuf().readBytes(bytes).discardReadBytes();
 				model.setSendSeq(model.getSendSeq() + 1);
 				model.setSendSize(Math.addExact(model.getSendSize(), bytes.length));
 				model.getSb().append(Components.numPad(Math.addExact(bytes.length, 19), 4));

@@ -1,7 +1,5 @@
 package com.netty.socket;
 
-import java.io.BufferedOutputStream;
-import java.io.FileOutputStream;
 import java.io.RandomAccessFile;
 
 import io.netty.buffer.ByteBuf;
@@ -11,18 +9,20 @@ import lombok.Data;
 @Data
 public class SocketModel {
 
-	// 900MB
-	private long maxSendSize = 943718400;
+	// 500MB (1MB * 500)
+	private long maxSendSize = Math.multiplyExact(1048576l, 500);
 	// 10MB
 	private int maxfileBufSize = 10485760;
+	// 5MB
+	private int maxfileReadBufSize = 5242880;
 	private boolean msgSizeRead = false;
 	private long readSize = 0;
 	private ByteBuf packet = null;
 	private ByteBuf fileBuf = null;
 	private StringBuilder sb = null;
 	private RandomAccessFile raf = null;
-	private FileOutputStream fos = null;
-	private BufferedOutputStream bos = null;
+//	private FileOutputStream fos = null;
+//	private BufferedOutputStream bos = null;
 
 	// 전문 구성
 	// SI 개시요구[73]
@@ -102,10 +102,10 @@ public class SocketModel {
 			}
 			if (raf != null)
 				raf.close();
-			if (bos != null)
-				bos.close();
-			if (fos != null)
-				fos.close();
+//			if (bos != null)
+//				bos.close();
+//			if (fos != null)
+//				fos.close();
 		} catch (Exception e) {
 			ReferenceCountUtil.safeRelease(packet);
 			ReferenceCountUtil.safeRelease(fileBuf);
@@ -115,8 +115,8 @@ public class SocketModel {
 		packet = null;
 		fileBuf = null;
 		raf = null;
-		fos = null;
-		bos = null;
+//		fos = null;
+//		bos = null;
 	}
 
 }
