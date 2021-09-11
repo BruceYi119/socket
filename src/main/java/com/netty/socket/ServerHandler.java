@@ -302,6 +302,8 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 						} catch (Exception e) {
 							log.error("ServerHandler process() switch(SS) FileManager.write() Exception : ", e);
 						}
+					} else {
+						fileNm = String.format("%s/%s", Env.getUploadPath(), model.getFileNm());
 					}
 
 					log.warn(String.format("ServerHandler END MODEL : %s", model));
