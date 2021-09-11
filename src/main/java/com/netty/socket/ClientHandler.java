@@ -27,23 +27,15 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 	public static final Logger log = LoggerFactory.getLogger(ClientHandler.class);
 
 	private SocketModel model = null;
-	private String fileNm;
-	private long filePos, sendSize;
 
-	public ClientHandler(long sendSize, long filePos, String fileNm) {
-		this.fileNm = fileNm;
-		this.filePos = filePos;
-		this.sendSize = sendSize;
+	public ClientHandler(SocketModel model) {
+		this.model = model;
 	}
 
 	private void initModel(ChannelHandlerContext ctx) {
-		model = new SocketModel();
 		model.setSb(new StringBuilder());
 		model.setPacket(ctx.alloc().buffer());
 		model.setFileBuf(ctx.alloc().buffer());
-		model.setFileNm(fileNm);
-		model.setFileSize(sendSize);
-		model.setFilePos(filePos);
 	}
 
 	@Override
@@ -160,7 +152,8 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
 					for (byte[] b : msgList) {
 						if (idx == 0)
-							model.setMsgMulti(Integer.parseInt(Components.convertByteToString(b)));
+							continue;
+//							model.setThreadIdx(Integer.parseInt(Components.convertByteToString(b)));
 						else if (idx == 1)
 							model.setMsgChkCnt(Integer.parseInt(Components.convertByteToString(b)));
 						else
@@ -170,7 +163,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 					}
 
 					log.info(String.format("ServerHandler MSG : [%d %s %s %d %d]", Math.addExact(model.getMsgSize(), 4),
-							model.getMsgType(), model.getMsgRsCode(), model.getMsgMulti(), model.getMsgChkCnt()));
+							model.getMsgType(), model.getMsgRsCode(), model.getThreadIdx(), model.getMsgChkCnt()));
 
 					sendFile(ctx);
 					break;

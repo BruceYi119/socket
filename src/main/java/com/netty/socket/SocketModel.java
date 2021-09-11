@@ -9,8 +9,6 @@ import lombok.Data;
 @Data
 public class SocketModel {
 
-	// 500MB (1MB * 500)
-	private long maxSendSize = Math.multiplyExact(1048576l, 500);
 	// 10MB
 	private int maxfileBufSize = 10485760;
 	// 5MB
@@ -41,10 +39,10 @@ public class SocketModel {
 	// 응답코드[3](000 : 정상, 999 : 오류)
 	private String msgRsCode = "000";
 
-	// 개시요구[SI] 공통[9] + 멀티전송[1] + 확인간격[3] + 파일명[20] + 포지션[20] + 파일사이즈[20] = 73
-	// 개시응답[RI] 공통[9] + 멀티전송[1] + 확인간격[3] = 13
-	// 멀티전송[1](1:일반전송/2>:멀티쓰레드)
-	private int msgMulti = 0;
+	// 개시요구[SI] 공통[9] + Thread번호[1] + 확인간격[3] + 파일명[20] + 포지션[20] + 파일사이즈[20] = 73
+	// 개시응답[RI] 공통[9] + Thread번호[1] + 확인간격[3] = 13
+	// Thread번호[1]
+	private int threadIdx = 0;
 	// 확인간격[3]
 	private int msgChkCnt = 30;
 	// 파일명[20]
@@ -76,7 +74,7 @@ public class SocketModel {
 	public void clear() throws Exception {
 		msgSize = 0;
 		msgType = null;
-		msgMulti = 1;
+		threadIdx = 1;
 		filePos = 0;
 		msgChkCnt = 30;
 		msgSizeRead = false;

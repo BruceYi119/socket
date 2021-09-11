@@ -160,7 +160,7 @@ public class ClientHandler_ extends ChannelInboundHandlerAdapter {
 					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
 					for (byte[] b : msgList) {
 						if (idx == 0)
-							model.setMsgMulti(Integer.parseInt(Components.convertByteToString(b)));
+							model.setThreadIdx(Integer.parseInt(Components.convertByteToString(b)));
 						else if (idx == 1)
 							model.setMsgChkCnt(Integer.parseInt(Components.convertByteToString(b)));
 						else
@@ -170,7 +170,7 @@ public class ClientHandler_ extends ChannelInboundHandlerAdapter {
 					}
 
 					log.info(String.format("ServerHandler MSG : [%d %s %s %d %d]", Math.addExact(model.getMsgSize(), 4),
-							model.getMsgType(), model.getMsgRsCode(), model.getMsgMulti(), model.getMsgChkCnt()));
+							model.getMsgType(), model.getMsgRsCode(), model.getThreadIdx(), model.getMsgChkCnt()));
 
 					sendFile(ctx);
 					break;

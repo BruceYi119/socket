@@ -11,11 +11,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class Env {
 
-	private static String clientIp, sendPath, uploadPath, serverPort, clientPort;
+	private static String clientIp, sendPath, uploadPath, tmpPath, serverPort, clientPort;
 	private static Environment env;
 	private static Map<String, Integer[]> msgLen = new HashMap<>();
+	// 500MB (1MB * 500)
+	private static long maxSendSize = Math.multiplyExact(1048576l, 500);
 	// 7MB/11MB/15MB
-	public static int[] fileBufLen = { 7340032, 11534336, 15728640 };
+//	public static int[] fileBufLen = { 7340032, 11534336, 15728640 };
 
 	static {
 		msgLen.put("GG", new Integer[] { 2, 3 });
@@ -44,12 +46,17 @@ public class Env {
 
 		if (!path.toFile().exists())
 			path.toFile().mkdirs();
+
+		path = Paths.get(Env.getTmpPath());
+		if (!path.toFile().exists())
+			path.toFile().mkdirs();
 	}
 
 	private void initProp() {
 		clientIp = env.getProperty("custom.socket.client.ip");
 		sendPath = env.getProperty("custom.file.send.path");
 		uploadPath = env.getProperty("custom.file.upload.path");
+		tmpPath = env.getProperty("custom.file.tmp.path");
 		serverPort = env.getProperty("custom.socket.server.port");
 		clientPort = env.getProperty("custom.socket.client.port");
 	}
@@ -66,6 +73,10 @@ public class Env {
 		return uploadPath;
 	}
 
+	public static String getTmpPath() {
+		return tmpPath;
+	}
+
 	public static String getServerPort() {
 		return serverPort;
 	}
@@ -80,6 +91,10 @@ public class Env {
 
 	public static Map<String, Integer[]> getMsgLen() {
 		return msgLen;
+	}
+
+	public static long getMaxSendSize() {
+		return maxSendSize;
 	}
 
 }

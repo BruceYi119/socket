@@ -10,6 +10,7 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
 import com.netty.config.Env;
+import com.netty.file.FileManager;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -32,7 +33,7 @@ public class SocketServer implements ApplicationListener<ApplicationReadyEvent> 
 	private InitHandler handlers;
 	private ApplicationEventPublisher publisher;
 
-	public SocketServer(FileSend fs, ApplicationEventPublisher publisher) {
+	public SocketServer(FileManager fm, ApplicationEventPublisher publisher) {
 		ArrayList<ChannelHandler> handlers = new ArrayList<ChannelHandler>();
 		handlers.add(new IdleHandler(30, 30, 0));
 		handlers.add(new ServerHandler());

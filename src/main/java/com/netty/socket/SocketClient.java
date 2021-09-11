@@ -23,10 +23,10 @@ public class SocketClient implements Runnable {
 	private EventLoopGroup group;
 	private InitHandler handlers;
 
-	public SocketClient(int port, String host, long sendSize, long filePos, String fileNm) {
+	public SocketClient(int port, String host, SocketModel model) {
 		ArrayList<ChannelHandler> handlers = new ArrayList<ChannelHandler>();
 		handlers.add(new IdleHandler(30, 30, 0));
-		handlers.add(new ClientHandler(sendSize, filePos, fileNm));
+		handlers.add(new ClientHandler(model));
 		this.port = port;
 		this.host = host;
 		this.handlers = new InitHandler(handlers);
