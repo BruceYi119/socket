@@ -1,8 +1,5 @@
 package com.netty.socket;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import com.netty.component.Components;
 import com.netty.config.Env;
+import com.netty.file.FileManager;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -44,7 +42,9 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 		initModel(ctx);
 		ByteBuf buf = Unpooled.buffer();
 		model.getSb().append(Components.numPad(73, 4));
-		model.getSb().append(String.format("SI0002%s", Components.numPad(model.getMsgChkCnt(), 3)));
+		model.getSb().append("SI000");
+		model.getSb().append(model.getThreadIdx());
+		model.getSb().append(Components.numPad(model.getMsgChkCnt(), 3));
 		model.getSb().append(Components.strPad(model.getFileNm(), 20));
 		model.getSb().append(Components.numPad(model.getFilePos(), 20));
 		model.getSb().append(Components.numPad(model.getFileSize(), 20));
@@ -249,21 +249,16 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 				long size = Math.subtractExact(model.getFileSize(), model.getSendSize());
 				bytes = null;
 				bytes = size > 5101 ? new byte[5101] : new byte[(int) size];
-				model.setRaf(new RandomAccessFile(String.format("%s/%s", Env.getSendPath(), model.getFileNm()), "r"));
-				model.getRaf().seek(model.getFilePos());
-				model.getRaf().read(bytes);
-				model.getRaf().close();
-				model.setRaf(null);
+				bytes = FileManager.fileRead(String.format("%s/%s", Env.getSendPath(), model.getFileNm()), bytes,
+						model.getFilePos());
 				model.setFilePos(Math.addExact(model.getFilePos(), bytes.length));
 				model.setSendSeq(model.getSendSeq() + 1);
 				model.setSendSize(Math.addExact(model.getSendSize(), bytes.length));
 				model.getSb().append(Components.numPad(Math.addExact(bytes.length, 19), 4));
 				model.getSb().append("SS000");
 				model.getSb().append(Components.numPad(model.getSendSeq(), 10));
-			} catch (FileNotFoundException e) {
-				log.error("ClientHandler process() FileNotFoundException : ", e);
-			} catch (IOException e) {
-				log.error("ClientHandler process() IOException : ", e);
+			} catch (Exception e) {
+				log.error("ClientHandler process() Exception : ", e);
 			}
 
 			buf = Unpooled.buffer();

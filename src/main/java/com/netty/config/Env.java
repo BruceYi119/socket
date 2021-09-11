@@ -15,7 +15,7 @@ public class Env {
 	private static Environment env;
 	private static Map<String, Integer[]> msgLen = new HashMap<>();
 	// 500MB (1MB * 500)
-	private static long maxSendSize = Math.multiplyExact(1048576l, 500);
+	private static long maxSendSize = Math.multiplyExact(1048576l, 1276);
 	// 7MB/11MB/15MB
 //	public static int[] fileBufLen = { 7340032, 11534336, 15728640 };
 

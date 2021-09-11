@@ -1,5 +1,7 @@
 package com.netty.file;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,10 +29,10 @@ public class FileManager {
 
 	@EventListener
 	public void event(Event event) {
-		sendFile("test2.mp4");
+		sendFile("test.mp4");
 	}
 
-	public void sendFile(String fileNm) {
+	public static void sendFile(String fileNm) {
 		List<Thread> list = new ArrayList<>();
 		SocketModel model = null;
 		long filePos = 0;
@@ -42,10 +44,7 @@ public class FileManager {
 		long remainder = 0;
 
 		try {
-			RandomAccessFile raf = new RandomAccessFile(String.format("%s/%s", Env.getSendPath(), fileNm), "r");
-			fileSize = raf.length();
-			raf.close();
-
+			fileSize = getFileSize(String.format("%s/%s", Env.getSendPath(), fileNm));
 			oriCut = Math.floorDiv(fileSize, Env.getMaxSendSize());
 			cut = Math.addExact(oriCut, 1);
 			divisionVal = Math.floorDiv(fileSize, cut);
@@ -67,6 +66,7 @@ public class FileManager {
 				model.setFileNm(fileNm);
 				model.setFileSize(sendSize);
 				model.setFilePos(filePos);
+				model.setThreadIdx(i);
 				list.add(new Thread(new SocketClient(Integer.parseInt(Env.getClientPort()), Env.getClientIp(), model)));
 			}
 
@@ -77,6 +77,122 @@ public class FileManager {
 		} catch (Exception e) {
 			log.error("FileManager sendFile() Exception : ", e);
 		}
+	}
+
+	public static void sendFile(String fileNm, long maxSendSize) {
+		List<Thread> list = new ArrayList<>();
+		SocketModel model = null;
+		long filePos = 0;
+		long fileSize = 0;
+		long sendSize = 0;
+		long oriCut = 0;
+		long cut = 0;
+		long divisionVal = 0;
+		long remainder = 0;
+
+		try {
+			fileSize = getFileSize(String.format("%s/%s", Env.getSendPath(), fileNm));
+			oriCut = Math.floorDiv(fileSize, maxSendSize);
+			cut = Math.addExact(oriCut, 1);
+			divisionVal = Math.floorDiv(fileSize, cut);
+			remainder = Math.floorMod(fileSize, cut);
+
+			// multi Thread
+			for (int i = 1; i <= cut; i++) {
+				if (i == 1) {
+					sendSize = divisionVal;
+				} else if (i == cut) {
+					filePos = Math.addExact(filePos, sendSize);
+					sendSize = Math.addExact(divisionVal, remainder);
+				} else {
+					filePos = Math.addExact(filePos, sendSize);
+					sendSize = divisionVal;
+				}
+
+				model = new SocketModel();
+				model.setFileNm(fileNm);
+				model.setFileSize(sendSize);
+				model.setFilePos(filePos);
+				model.setThreadIdx(i);
+				list.add(new Thread(new SocketClient(Integer.parseInt(Env.getClientPort()), Env.getClientIp(), model)));
+			}
+
+			log.warn(String.format("[%s] Thread cnt : %d", fileNm, list.size()));
+
+			for (Thread t : list)
+				t.start();
+		} catch (Exception e) {
+			log.error("FileManager sendFile() Exception : ", e);
+		}
+	}
+
+	@SuppressWarnings("finally")
+	public static long getFileSize(String fileNm) throws Exception {
+		long size = 0;
+		RandomAccessFile raf = null;
+
+		try {
+			raf = new RandomAccessFile(fileNm, "r");
+			size = raf.length();
+		} catch (FileNotFoundException e) {
+			log.error("FileManager getFileSize() FileNotFoundException : ", e);
+			throw new FileNotFoundException(e.getMessage());
+		} finally {
+			if (raf != null)
+				try {
+					raf.close();
+				} catch (IOException e) {
+					log.error("FileManager getFileSize() raf.close() IOException : ", e);
+				}
+			return size;
+		}
+	}
+
+	@SuppressWarnings("finally")
+	public static byte[] fileRead(String fileNm, byte[] bytes, long pos) throws Exception {
+		RandomAccessFile raf = null;
+
+		try {
+			raf = new RandomAccessFile(fileNm, "r");
+			raf.seek(pos);
+			raf.read(bytes);
+		} catch (FileNotFoundException e) {
+			bytes = null;
+			log.error("FileManager read() FileNotFoundException : ", e);
+			throw new FileNotFoundException(e.getMessage());
+		} finally {
+			if (raf != null)
+				try {
+					raf.close();
+				} catch (IOException e) {
+					log.error("FileManager read() raf.close() IOException : ", e);
+				}
+			return bytes;
+		}
+	}
+
+	@SuppressWarnings("finally")
+	public static boolean fileWrite(String fileNm, byte[] bytes, long pos) throws Exception {
+		boolean r = false;
+
+		RandomAccessFile raf = null;
+		try {
+			raf = new RandomAccessFile(fileNm, "rw");
+			raf.seek(pos);
+			raf.write(bytes);
+		} catch (FileNotFoundException e) {
+			log.error("FileManager write() FileNotFoundException : ", e);
+			throw new FileNotFoundException(e.getMessage());
+		} finally {
+			if (raf != null)
+				try {
+					raf.close();
+				} catch (IOException e) {
+					log.error("FileManager write() raf.close() IOException : ", e);
+				}
+			return r;
+		}
+
 	}
 
 }

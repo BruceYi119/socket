@@ -9,18 +9,17 @@ import lombok.Data;
 @Data
 public class SocketModel {
 
-	// 10MB
-	private int maxfileBufSize = 10485760;
-	// 5MB
-	private int maxfileReadBufSize = 5242880;
+	private long tmpPos = 0;
+	// 1MB * 10
+	private int maxfileBufSize = (int) Math.multiplyExact(1048576l, 10);
+	// 1MB * 5
+	private int maxfileReadBufSize = (int) Math.multiplyExact(1048576l, 5);
 	private boolean msgSizeRead = false;
 	private long readSize = 0;
 	private ByteBuf packet = null;
 	private ByteBuf fileBuf = null;
 	private StringBuilder sb = null;
 	private RandomAccessFile raf = null;
-//	private FileOutputStream fos = null;
-//	private BufferedOutputStream bos = null;
 
 	// 전문 구성
 	// SI 개시요구[73]
@@ -80,6 +79,7 @@ public class SocketModel {
 		msgSizeRead = false;
 		msgRsCode = "000";
 		msgSeq = 0;
+		tmpPos = 0;
 		fileNm = null;
 		fileSize = 0;
 		readSize = 0;
@@ -100,10 +100,6 @@ public class SocketModel {
 			}
 			if (raf != null)
 				raf.close();
-//			if (bos != null)
-//				bos.close();
-//			if (fos != null)
-//				fos.close();
 		} catch (Exception e) {
 			ReferenceCountUtil.safeRelease(packet);
 			ReferenceCountUtil.safeRelease(fileBuf);
@@ -113,8 +109,6 @@ public class SocketModel {
 		packet = null;
 		fileBuf = null;
 		raf = null;
-//		fos = null;
-//		bos = null;
 	}
 
 }

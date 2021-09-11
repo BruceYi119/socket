@@ -1,8 +1,5 @@
 package com.netty.socket;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -13,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import com.netty.component.Components;
 import com.netty.config.Env;
+import com.netty.file.FileManager;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -192,23 +190,19 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 					if (model.getFileBuf().readableBytes() >= model.getMaxfileBufSize()
 							|| model.getFileSize() == model.getRecvSize()) {
+						bytes = null;
+						bytes = new byte[model.getFileBuf().readableBytes()];
+						model.getFileBuf().readBytes(bytes).discardReadBytes();
+
 						try {
-							bytes = null;
-							bytes = new byte[model.getFileBuf().readableBytes()];
-							model.getFileBuf().readBytes(bytes).discardReadBytes();
-							model.setRaf(new RandomAccessFile(
-									String.format("%s/%s", Env.getUploadPath(), model.getFileNm()), "rw"));
-							model.getRaf().seek(model.getFilePos());
-							model.getRaf().write(bytes);
-							model.getRaf().close();
-							model.setRaf(null);
-							model.setFilePos(Math.addExact(model.getFilePos(), bytes.length));
-							log.warn(String.format("FILE WRITE BYTES : %d", bytes.length));
-						} catch (FileNotFoundException e) {
-							log.error("ServerHandler process() FileNotFoundException : ", e);
-						} catch (IOException e) {
-							log.error("ServerHandler process() IOException : ", e);
+							FileManager.fileWrite(String.format("%s/%s.%d.tmp", Env.getTmpPath(), model.getFileNm(),
+									model.getThreadIdx()), bytes, model.getTmpPos());
+						} catch (Exception e) {
+							log.error("ServerHandler process() switch(SS) FileManager.write() Exception : ", e);
 						}
+						model.setTmpPos(Math.addExact(model.getTmpPos(), bytes.length));
+//							model.setFilePos(Math.addExact(model.getFilePos(), bytes.length));
+						log.warn(String.format("FILE WRITE BYTES : %d", bytes.length));
 					}
 					break;
 				case "SC":
