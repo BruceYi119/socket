@@ -40,6 +40,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
+		log.warn("ServerHandler ACTIVE");
 		initModel(ctx);
 	}
 
@@ -66,6 +67,7 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+		log.warn("ServerHandler INACTIVE");
 		clearModel(ctx.channel().id());
 		ctx.close();
 	}
@@ -82,10 +84,10 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 		if (evt instanceof IdleStateEvent) {
 			IdleStateEvent e = (IdleStateEvent) evt;
 			if (e.state() == IdleState.READER_IDLE) {
-				log.warn("ClientHandler userEventTriggered() READER_IDLE");
+				log.warn("ServerHandler userEventTriggered() READER_IDLE");
 				ctx.close();
 			} else if (e.state() == IdleState.WRITER_IDLE) {
-				log.warn("ClientHandler userEventTriggered() WRITER_IDLE");
+				log.warn("ServerHandler userEventTriggered() WRITER_IDLE");
 				ctx.close();
 			}
 		}
@@ -135,7 +137,6 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 				// 타입별 전문 읽기
 				switch (model.getMsgType()) {
 				case "SI":
-					log.warn(String.format("FILE START ChannelId : %s", ctx.channel().id()));
 					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
 					for (byte[] b : msgList) {
 						if (idx == 0)
@@ -154,6 +155,8 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 						idx++;
 					}
 
+					log.warn(String.format("ServerHandler FILE START ChannelId : %s [%s]", ctx.channel().id(),
+							model.getFileNm()));
 					log.info(String.format("ClientHandler MSG : [%d %s %s %d %d %s %d %d]",
 							Math.addExact(model.getMsgSize(), 4), model.getMsgType(), model.getMsgRsCode(),
 							model.getThreadIdx(), model.getMsgChkCnt(), model.getFileNm(), model.getFilePos(),
@@ -250,7 +253,6 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 					model.getSb().setLength(0);
 					break;
 				case "SE":
-					log.warn(String.format("FILE END ChannelId : %s", ctx.channel().id()));
 					msgList = readMsg(Env.getMsgLen().get(model.getMsgType()), packet);
 
 					for (byte[] b : msgList) {
@@ -303,7 +305,9 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 					}
 
 					log.warn(String.format("ServerHandler END MODEL : %s", model));
-					clearModel(ctx.channel().id());
+					ChannelId chId = ctx.channel().id();
+					clearModel(chId);
+					log.warn(String.format("ServerHandler FILE END ChannelId : %s [%s]", chId, fileNm));
 					break;
 				default:
 					log.warn("ServerHandler process() switch default");

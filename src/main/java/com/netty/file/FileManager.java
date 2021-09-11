@@ -30,9 +30,14 @@ public class FileManager {
 
 	@EventListener
 	public void event(Event event) {
-		sendFile("test2.mp4");
-		sendFile("test.mp4", Math.multiplyExact(1048576l, 1276));
+		// 1MB 1048576 = 1048576l
+
+		// 1 Thread
 //		sendFile("test.mp4", Math.multiplyExact(1048576l, 11000));
+		// 6 Thread
+//		sendFile("test.mp4", Math.multiplyExact(1048576l, 2000));
+		// 9 Thread
+		sendFile("test.mp4", Math.multiplyExact(1048576l, 1200));
 	}
 
 	public static void sendFile(String fileNm) {

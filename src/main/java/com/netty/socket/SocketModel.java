@@ -12,8 +12,6 @@ public class SocketModel {
 	private long tmpPos = 0;
 	// 1MB * 10
 	private int maxfileBufSize = (int) Math.multiplyExact(1048576l, 10);
-	// 1MB * 5
-	private int maxfileReadBufSize = (int) Math.multiplyExact(1048576l, 5);
 	private boolean msgSizeRead = false;
 	private long readSize = 0;
 	private ByteBuf packet = null;
@@ -40,7 +38,7 @@ public class SocketModel {
 
 	// 개시요구[SI] 공통[9] + Thread번호[1] + 확인간격[3] + 파일명[20] + 포지션[20] + 파일사이즈[20] = 73
 	// 개시응답[RI] 공통[9] + Thread번호[1] + 확인간격[3] = 13
-	// Thread번호[1]
+	// Thread번호[1] 0 : Single Thread
 	private int threadIdx = 0;
 	// 확인간격[3]
 	private int msgChkCnt = 30;

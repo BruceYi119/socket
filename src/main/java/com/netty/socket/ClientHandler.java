@@ -38,7 +38,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelActive(ChannelHandlerContext ctx) throws Exception {
-		log.warn("ACTIVE");
+		log.warn("ClientHandler ACTIVE");
 		initModel(ctx);
 		ByteBuf buf = Unpooled.buffer();
 		model.getSb().append(Components.numPad(73, 4));
@@ -79,7 +79,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-		log.warn("INACTIVE");
+		log.warn("ClientHandler INACTIVE");
 		clearModel();
 		ctx.close();
 	}
@@ -97,11 +97,9 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 			IdleStateEvent e = (IdleStateEvent) evt;
 			if (e.state() == IdleState.READER_IDLE) {
 				log.warn("ClientHandler userEventTriggered() READER_IDLE");
-				log.warn(String.format("ClientHandler END MODEL : %s", model));
 				ctx.close();
 			} else if (e.state() == IdleState.WRITER_IDLE) {
 				log.warn("ClientHandler userEventTriggered() WRITER_IDLE");
-				log.warn(String.format("ClientHandler END MODEL : %s", model));
 				ctx.close();
 			}
 		}
