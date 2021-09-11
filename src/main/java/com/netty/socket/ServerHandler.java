@@ -30,13 +30,11 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 	private Map<ChannelId, SocketModel> models = new HashMap<>();
 
 	private void initModel(ChannelHandlerContext ctx) {
-//		Random ran = new Random();
 		SocketModel model = new SocketModel();
 		models.put(ctx.channel().id(), model);
 		model.setSb(new StringBuilder());
 		model.setPacket(ctx.alloc().buffer());
 		model.setFileBuf(ctx.alloc().buffer());
-//		model.setMaxfileBufSize(Env.fileBufLen[ran.nextInt(3)]);
 		log.warn(String.format("ServerHandler START MODEL : %s", model));
 	}
 
@@ -68,14 +66,14 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-		clearModel(ctx);
+		clearModel(ctx.channel().id());
 		ctx.close();
 	}
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
 		log.error("ServerHandler exceptionCaught() : ", cause);
-		clearModel(ctx);
+		clearModel(ctx.channel().id());
 		ctx.close();
 	}
 
@@ -97,7 +95,9 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 		SocketModel model = models.get(ctx.channel().id());
 		ByteBuf packet = model.getPacket();
 		int idx = 0;
+		long pos = 0;
 		byte[] bytes = null;
+		String fileNm = null;
 		List<byte[]> msgList = null;
 
 		log.info(String.format("readableBytes : %d", packet.readableBytes()));
@@ -195,14 +195,19 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 						model.getFileBuf().readBytes(bytes).discardReadBytes();
 
 						try {
-							FileManager.fileWrite(String.format("%s/%s.%d.tmp", Env.getTmpPath(), model.getFileNm(),
-									model.getThreadIdx()), bytes, model.getTmpPos());
+							// Single Thread
+							if (model.getThreadIdx() == 0)
+								fileNm = String.format("%s/%s", Env.getUploadPath(), model.getFileNm());
+							// Multi Thread
+							else
+								fileNm = String.format("%s/%s.%d.tmp", Env.getTmpPath(), model.getFileNm(),
+										model.getThreadIdx());
+
+							FileManager.fileWrite(fileNm, bytes, model.getTmpPos());
+							model.setTmpPos(Math.addExact(model.getTmpPos(), bytes.length));
 						} catch (Exception e) {
 							log.error("ServerHandler process() switch(SS) FileManager.write() Exception : ", e);
 						}
-						model.setTmpPos(Math.addExact(model.getTmpPos(), bytes.length));
-//							model.setFilePos(Math.addExact(model.getFilePos(), bytes.length));
-						log.warn(String.format("FILE WRITE BYTES : %d", bytes.length));
 					}
 					break;
 				case "SC":
@@ -275,9 +280,30 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 					log.info(String.format("ServerHandler MSG : [%s]", model.getSb().toString()));
 					model.getSb().setLength(0);
 
-					log.warn(String.format("ServerHandler END MODEL : %s", model));
-					clearModel(ctx);
 					ctx.close();
+
+					// Multi Thread 시에만 tmp 파일을 original로 합치는 로직수행
+					if (model.getThreadIdx() != 0) {
+						try {
+							bytes = null;
+							// tmp 읽기
+							String tmpfileNm = String.format("%s/%s.%d.tmp", Env.getTmpPath(), model.getFileNm(),
+									model.getThreadIdx());
+							bytes = FileManager.fileRead(tmpfileNm, new byte[(int) model.getFileSize()], 0);
+
+							// original 쓰기
+							fileNm = String.format("%s/%s", Env.getUploadPath(), model.getFileNm());
+							FileManager.fileWrite(fileNm, bytes, model.getFilePos());
+
+							// tmp 삭제
+							FileManager.fileDelete(tmpfileNm);
+						} catch (Exception e) {
+							log.error("ServerHandler process() switch(SS) FileManager.write() Exception : ", e);
+						}
+					}
+
+					log.warn(String.format("ServerHandler END MODEL : %s", model));
+					clearModel(ctx.channel().id());
 					break;
 				default:
 					log.warn("ServerHandler process() switch default");
@@ -303,13 +329,13 @@ public class ServerHandler extends ChannelInboundHandlerAdapter {
 		return list;
 	}
 
-	private void clearModel(ChannelHandlerContext ctx) {
-		SocketModel model = models.get(ctx.channel().id());
+	private void clearModel(ChannelId chId) {
+		SocketModel model = models.get(chId);
 
 		try {
 			if (model != null)
 				model.clear();
-			models.remove(ctx.channel().id());
+			models.remove(chId);
 		} catch (Exception e) {
 			log.error("ServerHandler clearModel() Exception : ", e);
 		}

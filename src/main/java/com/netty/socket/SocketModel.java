@@ -103,7 +103,7 @@ public class SocketModel {
 		} catch (Exception e) {
 			ReferenceCountUtil.safeRelease(packet);
 			ReferenceCountUtil.safeRelease(fileBuf);
-			throw new Exception(e);
+			throw new Exception(e.getMessage());
 		}
 
 		packet = null;
