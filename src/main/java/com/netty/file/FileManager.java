@@ -37,7 +37,7 @@ public class FileManager {
 		// 6 Thread
 //		sendFile("test.mp4", Math.multiplyExact(1048576l, 2000));
 		// 9 Thread
-		sendFile("test.mp4", Math.multiplyExact(1048576l, 1200));
+		sendFile("test.mp4", Math.multiplyExact(1048576l, 1500));
 	}
 
 	public static void sendFile(String fileNm) {
